@@ -26,7 +26,7 @@
 1. 로그인 뒤 뒤로 가기를 누르면 로그인 화면으로 돌아가지 않고 앱이 닫혀야 한다. 공유 코드 입력에 성공한 뒤에도 입력 화면으로 돌아가지 않아야 한다 (Task 2 수동 확인).
 2. 연말과 연초에 걸친 주(2026-12-28 ~ 2027-01-03)가 한 주로 묶여야 한다 (Task 3 테스트).
 3. 자정 근처에서는 시간대에 따라 "이번 주"가 달라진다. 서울 기준 월요일 00:30은 이미 새로운 주여야 한다 (Task 3 테스트).
-4. 이모지 같은 문자는 눈에 보이는 한 글자로 세야 한다. `🍚` 50개는 통과하고 51개는 실패한다 (Task 4 테스트).
+4. 끼니 텍스트 글자 수는 `String.length`(UTF-16 단위)로 센다. 이모지 `🍚`는 2글자라 25개는 통과하고 26개는 실패한다 (Task 4 테스트). (2026-11-16 사용자 결정으로 "눈에 보이는 한 글자" 기준에서 변경)
 5. 앞뒤 공백만 있는 끼니 텍스트는 "빈 값"으로 처리한다. 가운데 줄바꿈은 그대로 둔다 (Task 4 테스트).
 
 ---
@@ -213,7 +213,7 @@ git commit -m "주 계산과 끼니 종류 추가"
 - Produces:
   - `const val MAX_MEAL_TEXT_LENGTH = 50`
   - `sealed interface MealTextValidation { data class Valid(val text: String); data object Empty; data class TooLong(val length: Int) }` (세 타입 모두 `MealTextValidation`을 구현)
-  - `fun validateMealText(input: String): MealTextValidation`: 앞뒤 공백을 지운 뒤 판단한다. 글자 수는 눈에 보이는 문자 단위로 센다(UTF-16 low surrogate는 세지 않음). 가운데 줄바꿈은 유지한다.
+  - `fun validateMealText(input: String): MealTextValidation`: 앞뒤 공백을 지운 뒤 판단한다. 글자 수는 `String.length`(UTF-16 단위)로 센다. 서버(Kotlin)의 `length`와 같은 기준이다. 가운데 줄바꿈은 유지한다.
   - `data class MealCell(val date: LocalDate, val slot: MealSlot)`
   - `data class WeeklyMeals(val week: Week, val menus: Map<MealCell, String> = emptyMap())`
     - `val cells: List<MealCell>`: 21개. 날짜 순서로 놓고, 같은 날 안에서는 `MealSlot` 순서
@@ -234,9 +234,9 @@ git commit -m "주 계산과 끼니 종류 추가"
     assertEquals(MealTextValidation.Empty, validateMealText("  \n "))
 }
 @Test fun innerNewline_isKept() = assertEquals(MealTextValidation.Valid("밥\n국"), validateMealText("밥\n국"))
-@Test fun emoji_countsAsOneChar() {
-    assertIs<MealTextValidation.Valid>(validateMealText("🍚".repeat(50)))
-    assertEquals(MealTextValidation.TooLong(51), validateMealText("🍚".repeat(51)))
+@Test fun emoji_countsByStringLength() {
+    assertIs<MealTextValidation.Valid>(validateMealText("🍚".repeat(25)))
+    assertEquals(MealTextValidation.TooLong(52), validateMealText("🍚".repeat(26)))
 }
 @Test fun trailingSpacesDoNotCountTowardLimit() =
     assertIs<MealTextValidation.Valid>(validateMealText("a".repeat(50) + "   "))
@@ -296,4 +296,4 @@ git commit -m "끼니 텍스트 검증과 한 주 식단 모델 추가"
 
 - `CLAUDE.md` 아키텍처 절에 새 패키지(`navigation`, `ui`, `domain`)를 한 줄씩 추가한다.
 - 3단계(가짜 저장소와 주간 식단표 화면) 계획을 쓴다. 3단계는 이 계획의 `Week`, `WeeklyMeals`, `validateMealText`, `WeeklyRoute`를 쓴다.
-- 서버의 글자 수 세는 방식(UTF-16 길이인지, 문자 단위인지)은 API 명세가 나오면 확인한다.
+- 서버도 글자 수를 `String.length`로 세는지 API 명세가 나오면 확인한다.
