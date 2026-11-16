@@ -37,6 +37,9 @@ JetBrains KMP 템플릿으로 만든 Kotlin Multiplatform + Compose Multiplatfor
 
 - `shared/`: 앱 코드와 UI 전부. 새 AGP 플러그인 `com.android.kotlin.multiplatform.library`를 쓰는 KMP 라이브러리입니다(별도 `android {}` 블록이 아니라 `kotlin { android { ... } }` 안에서 설정). 타깃은 Android, `iosArm64`, `iosSimulatorArm64`이고, iOS는 `Shared`라는 이름의 정적 프레임워크로 빌드됩니다.
   - `commonMain`: 공통 로직과 Compose UI. 진입점은 `App.kt`의 `App()`입니다. Compose 리소스는 `commonMain/composeResources`에 두고, 생성되는 `bubumeal.shared.generated.resources.Res`로 접근합니다.
+    - `navigation/`: `@Serializable` 화면 경로(`Routes.kt`)와 `NavHost`(`AppNavHost.kt`). 화면 이동은 연타 방지를 위해 `navigateFrom`을 거칩니다. 화면 목록은 `docs/screen-flow.md`를 따릅니다.
+    - `ui/`: 공통 화면 컴포저블. 지금은 실제 화면 전까지 쓰는 `PlaceholderScreen`만 있습니다.
+    - `domain/`: UI와 무관한 순수 Kotlin 도메인 타입(`Week`, `MealSlot`, `WeeklyMeals`, `validateMealText`). 날짜는 `kotlinx-datetime`을 씁니다.
   - `androidMain` / `iosMain`: `expect` 선언의 `actual` 구현(예: `getPlatform()`). `iosMain/MainViewController.kt`는 `App()`을 `ComposeUIViewController`로 감쌉니다.
   - 테스트: `commonTest`(모든 타깃에서 실행), `androidHostTest`(JVM), `iosTest`. `kotlin.test`를 씁니다.
 - `androidApp/`: 얇은 Android 앱 껍데기. `MainActivity`는 `App()`만 호출합니다. 패키지/applicationId는 `com.mg.bubumeal`입니다.
