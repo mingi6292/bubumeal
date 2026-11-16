@@ -29,9 +29,10 @@ class MealTextTest {
         assertEquals(MealTextValidation.Valid("밥\n국"), validateMealText("밥\n국"))
 
     @Test
-    fun emoji_countsAsOneChar() {
-        assertIs<MealTextValidation.Valid>(validateMealText("🍚".repeat(50)))
-        assertEquals(MealTextValidation.TooLong(51), validateMealText("🍚".repeat(51)))
+    fun emoji_countsByStringLength() {
+        // 글자 수는 String.length(UTF-16 단위)로 센다. 🍚는 length가 2다.
+        assertIs<MealTextValidation.Valid>(validateMealText("🍚".repeat(25)))
+        assertEquals(MealTextValidation.TooLong(52), validateMealText("🍚".repeat(26)))
     }
 
     @Test

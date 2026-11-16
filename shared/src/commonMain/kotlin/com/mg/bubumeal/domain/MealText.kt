@@ -17,12 +17,13 @@ sealed interface MealTextValidation {
 
 /**
  * 앞뒤 공백을 지운 뒤 끼니 텍스트를 검증한다. 가운데 줄바꿈은 그대로 둔다.
- * 글자 수는 유니코드 문자(코드 포인트) 단위로 센다. `🍚`처럼 UTF-16 두 칸을 쓰는 문자도 한 글자다.
+ * 글자 수는 [String.length](UTF-16 단위)로 센다. 서버(Kotlin)의 `length`와 같은 기준이다.
+ * 그래서 `🍚` 같은 이모지는 2글자 이상으로 센다.
  */
 fun validateMealText(input: String): MealTextValidation {
     val text = input.trim()
     if (text.isEmpty()) return MealTextValidation.Empty
-    val length = text.length - text.count { it.isLowSurrogate() }
+    val length = text.length
     return if (length > MAX_MEAL_TEXT_LENGTH) {
         MealTextValidation.TooLong(length)
     } else {
