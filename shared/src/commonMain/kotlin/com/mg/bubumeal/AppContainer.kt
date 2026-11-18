@@ -5,6 +5,8 @@ import com.mg.bubumeal.data.FakeMealRepository
 import com.mg.bubumeal.data.FakePlanRepository
 import com.mg.bubumeal.data.FakeShareCodeRepository
 import com.mg.bubumeal.data.ShareCodeRepository
+import com.mg.bubumeal.data.SocialLogin
+import com.mg.bubumeal.data.platformSocialLogin
 import com.mg.bubumeal.data.MealRepository
 import com.mg.bubumeal.data.PlanRepository
 import com.mg.bubumeal.domain.MealCell
@@ -47,4 +49,7 @@ class AppContainer(
     }
 
     val currentPlan = CurrentPlan()
+
+    // expect/actual: Android로 빌드하면 androidMain, iOS로 빌드하면 iosMain의 구현이 들어온다.
+    val socialLogin: SocialLogin = platformSocialLogin()
 }
