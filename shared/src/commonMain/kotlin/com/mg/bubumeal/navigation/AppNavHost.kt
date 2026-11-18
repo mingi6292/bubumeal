@@ -13,6 +13,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.mg.bubumeal.AppContainer
 import com.mg.bubumeal.ui.PlaceholderScreen
+import com.mg.bubumeal.ui.planswitch.PlanSwitchScreen
+import com.mg.bubumeal.ui.planswitch.PlanSwitchViewModel
 import com.mg.bubumeal.ui.weekly.WeeklyScreen
 import com.mg.bubumeal.ui.weekly.WeeklyViewModel
 
@@ -79,11 +81,18 @@ fun AppNavHost(container: AppContainer, navController: NavHostController = remem
             )
         }
         composable<PlanSwitchRoute> { entry ->
-            PlaceholderScreen(
-                title = "식단표 전환",
-                actions = listOf(
-                    "공유 코드 입력" to { navController.navigateFrom(entry, CodeInputRoute) },
-                ),
+            val vm = viewModel { PlanSwitchViewModel(container.planRepository, container.currentPlan) }
+            val state by vm.uiState.collectAsStateWithLifecycle()
+            // 주간 식단표까지만 돌아간다. 빠르게 두 번 눌러도 주간 식단표를 지나 앱이 닫히지 않는다.
+            val backToWeekly = { navController.popBackStack<WeeklyRoute>(inclusive = false) }
+            PlanSwitchScreen(
+                state = state,
+                onSelect = { plan ->
+                    vm.select(plan)
+                    backToWeekly()
+                },
+                onEnterCode = { navController.navigateFrom(entry, CodeInputRoute) },
+                onBack = { backToWeekly() },
             )
         }
         composable<PlanSettingsRoute> { entry ->
