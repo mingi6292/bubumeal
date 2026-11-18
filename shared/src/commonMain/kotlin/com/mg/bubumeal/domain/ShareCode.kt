@@ -19,7 +19,7 @@ sealed interface ShareCodeValidation {
 }
 
 /** 공유 코드에 쓸 수 있는 문자. 영문 대문자와 숫자에서 헷갈리는 0, O, 1, I를 뺐다. */
-private const val SHARE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+internal const val SHARE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 /**
  * 앞뒤 공백을 지우고 대문자로 바꾼 뒤 공유 코드 형식을 검사한다.

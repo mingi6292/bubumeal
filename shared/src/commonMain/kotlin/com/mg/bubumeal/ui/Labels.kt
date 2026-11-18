@@ -5,8 +5,11 @@ import com.mg.bubumeal.domain.MealSlot
 import com.mg.bubumeal.domain.PlanRole
 import com.mg.bubumeal.domain.Week
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.number
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 
 // 화면에 보이는 문구. 날짜 형식은 플랫폼 포매터 대신 직접 만들어 Android와 iOS가 똑같이 보이게 한다.
 
@@ -40,3 +43,10 @@ fun weekRangeLabel(week: Week): String {
 
 /** 끼니 편집 창 제목. 예: `11/16 (월) 저녁` */
 fun mealCellTitle(cell: MealCell): String = "${dayLabel(cell.date)} ${cell.slot.label()}"
+
+/** 공유 코드 만료, 입력 차단 시각. 예: `11/18 (수) 15:05` (24시간제) */
+fun dateTimeLabel(instant: Instant, timeZone: TimeZone): String {
+    val local = instant.toLocalDateTime(timeZone)
+    fun pad(n: Int) = n.toString().padStart(2, '0')
+    return "${dayLabel(local.date)} ${pad(local.hour)}:${pad(local.minute)}"
+}
