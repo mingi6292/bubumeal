@@ -230,6 +230,28 @@ class WeeklyViewModelTest {
         assertFalse(state.meals.menus.containsValue(LATE))
     }
 
+    @Test
+    fun openEditor_whileLoading_isIgnored() = runTest {
+        // 로딩 중인 빈 칸으로 편집 창을 열면, 로딩이 끝난 뒤 진짜 메뉴를 빈 값으로 덮어 지울 수 있다.
+        val vm = viewModel(meals = SlowWeekRepository(slowWeek = thisWeek.next()))
+        advanceUntilIdle()
+        vm.nextWeek()
+        advanceTimeBy(10)
+        vm.openEditor(MealCell(LocalDate(2026, 11, 23), MealSlot.LUNCH))
+        assertNull(vm.uiState.value.editingCell)
+    }
+
+    @Test
+    fun reload_closesOpenEditor() = runTest {
+        val current = CurrentPlan()
+        val vm = viewModel(current = current)
+        advanceUntilIdle()
+        vm.openEditor(monLunch)
+        current.select(joined)
+        advanceUntilIdle()
+        assertNull(vm.uiState.value.editingCell)
+    }
+
     /** [slowWeek]를 읽을 때만 1초 늦게, 그 주 첫 칸에 [LATE]를 넣어 돌려준다. */
     private class SlowWeekRepository(private val slowWeek: Week) : MealRepository {
         private val delegate = FakeMealRepository()

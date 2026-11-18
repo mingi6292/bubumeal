@@ -70,8 +70,15 @@ class WeeklyViewModel(
             // 식단표나 주가 바뀔 때마다 다시 불러온다. collectLatest가 끝나지 않은 이전 로딩을 취소하므로
             // 늦게 도착한 이전 주 데이터가 화면을 덮어쓰지 않는다.
             combine(currentPlan.selected.filterNotNull(), week, ::Pair).collectLatest { (plan, week) ->
+                // 열려 있던 편집 창은 닫는다. 다른 식단표/주의 칸을 가리키게 되기 때문이다.
                 _uiState.update {
-                    it.copy(plan = plan, meals = WeeklyMeals(week), isLoading = true, hasNoPlan = false)
+                    it.copy(
+                        plan = plan,
+                        meals = WeeklyMeals(week),
+                        isLoading = true,
+                        hasNoPlan = false,
+                        editingCell = null,
+                    )
                 }
                 val meals = mealRepository.weeklyMeals(plan.id, week)
                 _uiState.update { it.copy(meals = meals, isLoading = false) }
@@ -87,7 +94,11 @@ class WeeklyViewModel(
         week.value = Week.containing(today)
     }
 
-    fun openEditor(cell: MealCell) = _uiState.update { it.copy(editingCell = cell) }
+    /**
+     * 로딩 중에는 열지 않는다. 로딩 중의 칸은 비어 보이므로, 그때 연 창에서 저장하면
+     * 로딩이 끝난 뒤의 진짜 메뉴를 빈 값으로 지울 수 있다.
+     */
+    fun openEditor(cell: MealCell) = _uiState.update { if (it.isLoading) it else it.copy(editingCell = cell) }
 
     fun closeEditor() = _uiState.update { it.copy(editingCell = null) }
 
