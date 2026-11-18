@@ -11,8 +11,14 @@ import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.runtime.LaunchedEffect
 import com.mg.bubumeal.AppContainer
+import com.mg.bubumeal.domain.PlanRole
 import com.mg.bubumeal.ui.PlaceholderScreen
+import com.mg.bubumeal.ui.codeinput.CodeInputScreen
+import com.mg.bubumeal.ui.codeinput.CodeInputViewModel
+import com.mg.bubumeal.ui.issuecode.IssueCodeScreen
+import com.mg.bubumeal.ui.issuecode.IssueCodeViewModel
 import com.mg.bubumeal.ui.planswitch.PlanSwitchScreen
 import com.mg.bubumeal.ui.planswitch.PlanSwitchViewModel
 import com.mg.bubumeal.ui.weekly.WeeklyScreen
@@ -48,17 +54,22 @@ fun AppNavHost(container: AppContainer, navController: NavHostController = remem
             )
         }
         composable<CodeInputRoute> { entry ->
-            PlaceholderScreen(
-                title = "공유 코드 입력",
-                actions = listOf(
-                    "가짜 성공" to {
-                        // 어디서 왔든 백스택을 모두 비우고 주간 식단표 하나만 남긴다.
-                        // 그래프 전체를 지우는 방식이다. 에뮬레이터에서 확인함. WeeklyRoute에 인자가 생기면 다시 확인한다.
-                        navController.navigateFrom(entry, WeeklyRoute) {
-                            popUpTo(navController.graph.id) { inclusive = true }
-                        }
-                    },
-                ),
+            val vm = viewModel { CodeInputViewModel(container.shareCodeRepository, container.currentPlan) }
+            val state by vm.uiState.collectAsStateWithLifecycle()
+            // 연결에 성공하면 ViewModel이 이미 CurrentPlan을 새 식단표로 바꿔 두었다.
+            LaunchedEffect(state.joined) {
+                if (!state.joined) return@LaunchedEffect
+                // 어디서 왔든 백스택을 모두 비우고 주간 식단표 하나만 남긴다.
+                // 그래프 전체를 지우는 방식이다. 에뮬레이터에서 확인함. WeeklyRoute에 인자가 생기면 다시 확인한다.
+                navController.navigateFrom(entry, WeeklyRoute) {
+                    popUpTo(navController.graph.id) { inclusive = true }
+                }
+            }
+            CodeInputScreen(
+                state = state,
+                onSubmit = vm::submit,
+                onTextChange = vm::clearError,
+                onBack = { navController.popBackStack(entry.destination.id, inclusive = true) },
             )
         }
         composable<WeeklyRoute> { entry ->
@@ -96,15 +107,26 @@ fun AppNavHost(container: AppContainer, navController: NavHostController = remem
             )
         }
         composable<PlanSettingsRoute> { entry ->
+            val plan by container.currentPlan.selected.collectAsStateWithLifecycle()
             PlaceholderScreen(
                 title = "식단표 설정",
-                actions = listOf(
-                    "공유 코드 발급" to { navController.navigateFrom(entry, IssueCodeRoute) },
-                ),
+                // 발급은 소유자만 (docs/screen-flow.md 4장). 동반자가 있으면 숨기는 임시 결정은
+                // 식단표에 동반자 정보가 생긴 뒤(설정 화면 단계)에 넣는다.
+                actions = if (plan?.role == PlanRole.OWNER) {
+                    listOf("공유 코드 발급" to { navController.navigateFrom(entry, IssueCodeRoute) })
+                } else {
+                    emptyList()
+                },
             )
         }
-        composable<IssueCodeRoute> {
-            PlaceholderScreen(title = "공유 코드 발급", actions = emptyList())
+        composable<IssueCodeRoute> { entry ->
+            val vm = viewModel { IssueCodeViewModel(container.shareCodeRepository, container.currentPlan) }
+            val state by vm.uiState.collectAsStateWithLifecycle()
+            IssueCodeScreen(
+                state = state,
+                onIssue = vm::issue,
+                onBack = { navController.popBackStack(entry.destination.id, inclusive = true) },
+            )
         }
     }
 }

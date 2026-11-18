@@ -3,6 +3,8 @@ package com.mg.bubumeal
 import com.mg.bubumeal.data.CurrentPlan
 import com.mg.bubumeal.data.FakeMealRepository
 import com.mg.bubumeal.data.FakePlanRepository
+import com.mg.bubumeal.data.FakeShareCodeRepository
+import com.mg.bubumeal.data.ShareCodeRepository
 import com.mg.bubumeal.data.MealRepository
 import com.mg.bubumeal.data.PlanRepository
 import com.mg.bubumeal.domain.MealCell
@@ -25,7 +27,11 @@ class AppContainer(
     private val myPlan = PlanSummary(PlanId("my-plan"), PlanRole.OWNER)
     private val joinedPlan = PlanSummary(PlanId("joined-plan"), PlanRole.COMPANION)
 
-    val planRepository: PlanRepository = FakePlanRepository(listOf(myPlan, joinedPlan))
+    private val fakePlanRepository = FakePlanRepository(listOf(myPlan, joinedPlan))
+    val planRepository: PlanRepository = fakePlanRepository
+
+    // 가짜끼리는 서로 알아야 한다. 코드로 연결에 성공하면 식단표 목록에 더해야 하기 때문이다.
+    val shareCodeRepository: ShareCodeRepository = FakeShareCodeRepository(fakePlanRepository, clock)
 
     val mealRepository: MealRepository = run {
         // 전환해 보면 차이가 보이도록 참여 중인 식단표의 이번 주에만 메뉴를 미리 넣는다.

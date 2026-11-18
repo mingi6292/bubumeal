@@ -5,6 +5,7 @@ import com.mg.bubumeal.domain.MealSlot
 import com.mg.bubumeal.domain.PlanRole
 import com.mg.bubumeal.domain.Week
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -36,4 +37,11 @@ class LabelsTest {
     @Test
     fun mealCellTitle() =
         assertEquals("11/16 (월) 저녁", mealCellTitle(MealCell(LocalDate(2026, 11, 16), MealSlot.DINNER)))
+
+    @Test
+    fun dateTimeLabel_inGivenTimeZone_zeroPadded() {
+        val seoul = TimeZone.of("Asia/Seoul")
+        assertEquals("11/18 (수) 15:05", dateTimeLabel(kotlin.time.Instant.parse("2026-11-18T06:05:00Z"), seoul))
+        assertEquals("11/19 (목) 09:00", dateTimeLabel(kotlin.time.Instant.parse("2026-11-19T00:00:00Z"), seoul))
+    }
 }
