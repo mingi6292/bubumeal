@@ -11,6 +11,7 @@ import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.LaunchedEffect
 import com.mg.bubumeal.AppContainer
 import com.mg.bubumeal.domain.PlanRole
@@ -19,6 +20,9 @@ import com.mg.bubumeal.ui.codeinput.CodeInputScreen
 import com.mg.bubumeal.ui.codeinput.CodeInputViewModel
 import com.mg.bubumeal.ui.issuecode.IssueCodeScreen
 import com.mg.bubumeal.ui.issuecode.IssueCodeViewModel
+import com.mg.bubumeal.ui.login.LoginDestination
+import com.mg.bubumeal.ui.login.LoginScreen
+import com.mg.bubumeal.ui.login.LoginViewModel
 import com.mg.bubumeal.ui.planswitch.PlanSwitchScreen
 import com.mg.bubumeal.ui.planswitch.PlanSwitchViewModel
 import com.mg.bubumeal.ui.weekly.WeeklyScreen
@@ -28,17 +32,22 @@ import com.mg.bubumeal.ui.weekly.WeeklyViewModel
 fun AppNavHost(container: AppContainer, navController: NavHostController = rememberNavController()) {
     NavHost(navController = navController, startDestination = LoginRoute) {
         composable<LoginRoute> { entry ->
-            PlaceholderScreen(
-                title = "로그인",
-                actions = listOf(
-                    "가짜 로그인" to {
-                        // 로그인 화면을 백스택에서 지워, 뒤로 가기로 돌아오지 않게 한다.
-                        navController.navigateFrom(entry, StartRoute) {
-                            popUpTo<LoginRoute> { inclusive = true }
-                        }
-                    },
-                ),
-            )
+            val vm = viewModel { LoginViewModel(container.socialLogin, container.planRepository) }
+            val state by vm.uiState.collectAsStateWithLifecycle()
+            LaunchedEffect(state.destination) {
+                val route: Any = when (state.destination) {
+                    LoginDestination.WEEKLY -> WeeklyRoute
+                    LoginDestination.START -> StartRoute
+                    null -> return@LaunchedEffect
+                }
+                // 로그인 창(다른 Activity)이 앞에 떠 있는 동안 결과가 와도 이동이 버려지지 않게 돌아올 때까지 기다린다.
+                entry.lifecycle.awaitResumed()
+                // 로그인 화면을 백스택에서 지워, 뒤로 가기로 돌아오지 않게 한다.
+                navController.navigateFrom(entry, route) {
+                    popUpTo<LoginRoute> { inclusive = true }
+                }
+            }
+            LoginScreen(state = state, onLogin = vm::login)
         }
         composable<StartRoute> { entry ->
             PlaceholderScreen(
@@ -59,6 +68,7 @@ fun AppNavHost(container: AppContainer, navController: NavHostController = remem
             // 연결에 성공하면 ViewModel이 이미 CurrentPlan을 새 식단표로 바꿔 두었다.
             LaunchedEffect(state.joined) {
                 if (!state.joined) return@LaunchedEffect
+                entry.lifecycle.awaitResumed()
                 // 어디서 왔든 백스택을 모두 비우고 주간 식단표 하나만 남긴다.
                 // 그래프 전체를 지우는 방식이다. 에뮬레이터에서 확인함. WeeklyRoute에 인자가 생기면 다시 확인한다.
                 navController.navigateFrom(entry, WeeklyRoute) {
@@ -129,6 +139,14 @@ fun AppNavHost(container: AppContainer, navController: NavHostController = remem
             )
         }
     }
+}
+
+/**
+ * RESUMED가 될 때까지 기다린다. 상태(ViewModel 값)를 보고 이동할 때 [navigateFrom] 앞에 부른다.
+ * 그러지 않으면 화면이 잠깐 가려진 순간에 온 결과로는 이동이 무시되고, 같은 값으로는 다시 시도되지 않는다.
+ */
+suspend fun Lifecycle.awaitResumed() {
+    currentStateFlow.first { it.isAtLeast(Lifecycle.State.RESUMED) }
 }
 
 /**
