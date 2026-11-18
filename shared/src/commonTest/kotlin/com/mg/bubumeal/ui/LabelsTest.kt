@@ -1,5 +1,7 @@
 package com.mg.bubumeal.ui
 
+import com.mg.bubumeal.domain.LoginProvider
+import com.mg.bubumeal.domain.LoginResult
 import com.mg.bubumeal.domain.MealCell
 import com.mg.bubumeal.domain.MealSlot
 import com.mg.bubumeal.domain.PlanRole
@@ -10,6 +12,16 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class LabelsTest {
+    @Test
+    fun loginProviderLabels_inButtonOrder() =
+        assertEquals(listOf("카카오", "네이버", "구글", "애플"), LoginProvider.entries.map { it.label() })
+
+    @Test
+    fun loginFailureMessages() {
+        assertEquals("로그인을 취소했어요.", LoginResult.Cancelled.message())
+        assertEquals("로그인하지 못했어요. 잠시 후 다시 시도해 주세요.", LoginResult.Failed.message())
+    }
+
     @Test
     fun planRoleLabels() {
         assertEquals("내 식단표", PlanRole.OWNER.label())

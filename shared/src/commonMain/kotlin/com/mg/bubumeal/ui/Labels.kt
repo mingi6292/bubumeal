@@ -1,5 +1,7 @@
 package com.mg.bubumeal.ui
 
+import com.mg.bubumeal.domain.LoginProvider
+import com.mg.bubumeal.domain.LoginResult
 import com.mg.bubumeal.domain.MealCell
 import com.mg.bubumeal.domain.MealSlot
 import com.mg.bubumeal.domain.PlanRole
@@ -49,4 +51,17 @@ fun dateTimeLabel(instant: Instant, timeZone: TimeZone): String {
     val local = instant.toLocalDateTime(timeZone)
     fun pad(n: Int) = n.toString().padStart(2, '0')
     return "${dayLabel(local.date)} ${pad(local.hour)}:${pad(local.minute)}"
+}
+
+fun LoginProvider.label(): String = when (this) {
+    LoginProvider.KAKAO -> "카카오"
+    LoginProvider.NAVER -> "네이버"
+    LoginProvider.GOOGLE -> "구글"
+    LoginProvider.APPLE -> "애플"
+}
+
+/** 로그인 실패 안내 (기획 5장). */
+fun LoginResult.Failure.message(): String = when (this) {
+    LoginResult.Cancelled -> "로그인을 취소했어요."
+    LoginResult.Failed -> "로그인하지 못했어요. 잠시 후 다시 시도해 주세요."
 }
