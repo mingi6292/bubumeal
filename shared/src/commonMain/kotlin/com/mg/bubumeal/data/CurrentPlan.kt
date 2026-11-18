@@ -11,10 +11,14 @@ import kotlinx.coroutines.flow.asStateFlow
 class CurrentPlan {
     private val _selected = MutableStateFlow<PlanSummary?>(null)
 
-    /** 아직 고르지 않았으면 null. */
+    /** 아직 고르지 않았거나 볼 식단표가 하나도 없으면 null. */
     val selected: StateFlow<PlanSummary?> = _selected.asStateFlow()
 
     fun select(plan: PlanSummary) {
         _selected.value = plan
+    }
+
+    fun clear() {
+        _selected.value = null
     }
 }

@@ -71,7 +71,7 @@ class FakeShareCodeRepository(
     private fun joinNewPlan(): JoinResult {
         successUsed = true
         joinedCount++
-        val plan = PlanSummary(PlanId("joined-by-code-$joinedCount"), PlanRole.COMPANION)
+        val plan = PlanSummary(PlanId("joined-by-code-$joinedCount"), PlanRole.COMPANION, hasCompanion = true)
         planRepository.add(plan)
         return JoinResult.Joined(plan)
     }
