@@ -118,6 +118,13 @@ fun AppNavHost(container: AppContainer, navController: NavHostController = remem
             val state by vm.uiState.collectAsStateWithLifecycle()
             // 주간 식단표까지만 돌아간다. 빠르게 두 번 눌러도 주간 식단표를 지나 앱이 닫히지 않는다.
             val backToWeekly = { navController.popBackStack<WeeklyRoute>(inclusive = false) }
+            // 내 식단표를 만들면 ViewModel이 CurrentPlan을 새 식단표로 바꿔 두었으므로, 주간 식단표로 돌아가기만 하면 된다.
+            LaunchedEffect(state.created) {
+                if (!state.created) return@LaunchedEffect
+                entry.lifecycle.awaitResumed()
+                backToWeekly()
+                vm.createdHandled()
+            }
             PlanSwitchScreen(
                 state = state,
                 onSelect = { plan ->
@@ -125,6 +132,7 @@ fun AppNavHost(container: AppContainer, navController: NavHostController = remem
                     backToWeekly()
                 },
                 onEnterCode = { navController.navigateFrom(entry, CodeInputRoute) },
+                onCreateOwn = vm::createOwn,
                 onBack = { backToWeekly() },
             )
         }
@@ -150,7 +158,8 @@ fun AppNavHost(container: AppContainer, navController: NavHostController = remem
                 onDelete = vm::requestDelete,
                 onConfirmDialog = vm::confirmDialog,
                 onDismissDialog = vm::dismissDialog,
-                onBack = { navController.popBackStack(entry.destination.id, inclusive = true) },
+                // 해제, 나가기, 삭제를 보내는 중에는 떠나지 않는다. 떠나면 끝난 뒤의 이동이 사라진다.
+                onBack = { if (!state.isWorking) navController.popBackStack(entry.destination.id, inclusive = true) },
                 onDebugLoseAccess = container.debugLoseAccess?.let { lose ->
                     { state.plan?.let { lose(it.id) } }
                 },

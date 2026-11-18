@@ -3,12 +3,16 @@ package com.mg.bubumeal.ui.plansettings
 import com.mg.bubumeal.data.CurrentPlan
 import com.mg.bubumeal.data.FakePlanRepository
 import com.mg.bubumeal.data.PlanExitDestination
+import com.mg.bubumeal.data.PlanRepository
+import com.mg.bubumeal.domain.PlanActionResult
 import com.mg.bubumeal.domain.PlanId
 import com.mg.bubumeal.domain.PlanRole
 import com.mg.bubumeal.domain.PlanSummary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -205,5 +209,28 @@ class PlanSettingsViewModelTest {
         val f = fixture(listOf(mineAlone), selected = joined)
         assertEquals(SettingsDialog.ACCESS_LOST, f.vm.uiState.value.dialog)
         assertFalse(f.vm.uiState.value.isLoading)
+    }
+
+    @Test
+    fun whileWorking_dialogCannotBeDismissed() = runTest {
+        // 서버가 느릴 때 삭제 중에 대화상자를 닫으면, 뒤로 가기로 화면을 떠나 이동이 사라질 수 있다.
+        val repo = FakePlanRepository(listOf(mineAlone))
+        val slow = object : PlanRepository by repo {
+            override suspend fun delete(planId: PlanId): PlanActionResult {
+                delay(1_000)
+                return repo.delete(planId)
+            }
+        }
+        val vm = PlanSettingsViewModel(slow, CurrentPlan().apply { select(mineAlone) })
+        advanceUntilIdle()
+        vm.requestDelete()
+        vm.confirmDialog()
+        advanceTimeBy(10)
+        assertTrue(vm.uiState.value.isWorking)
+        vm.dismissDialog()
+        assertEquals(SettingsDialog.CONFIRM_DELETE, vm.uiState.value.dialog)
+
+        advanceUntilIdle()
+        assertEquals(PlanExitDestination.START, vm.uiState.value.exitTo)
     }
 }

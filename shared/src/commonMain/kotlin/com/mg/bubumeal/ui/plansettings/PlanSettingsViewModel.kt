@@ -56,12 +56,14 @@ class PlanSettingsViewModel(
     private val _uiState = MutableStateFlow(PlanSettingsUiState())
     val uiState: StateFlow<PlanSettingsUiState> = _uiState.asStateFlow()
 
+    /** 이 화면이 다루는 식단표. 화면을 여는 순간 골라 둔 것으로 정하고, 나간 뒤에는 다시 고르지 않는다. */
+    private val planId: PlanId? = currentPlan.selected.value?.id
+
     init {
-        val selected = currentPlan.selected.value
-        if (selected == null) {
+        if (planId == null) {
             _uiState.update { it.copy(isLoading = false, dialog = SettingsDialog.ACCESS_LOST) }
         } else {
-            viewModelScope.launch { refresh(selected.id) }
+            viewModelScope.launch { refresh(planId) }
         }
     }
 
@@ -71,16 +73,18 @@ class PlanSettingsViewModel(
 
     fun requestDelete() = ask(SettingsDialog.CONFIRM_DELETE)
 
-    /** 확인 대화상자는 그냥 닫는다. 접근 상실 안내는 닫을 수 없다(볼 식단표가 없으므로 확인해야 한다). */
+    /**
+     * 확인 대화상자는 그냥 닫는다. 접근 상실 안내는 닫을 수 없다(볼 식단표가 없으므로 확인해야 한다).
+     * 서버에 보내는 중에도 닫지 않는다. 닫으면 화면을 떠날 수 있게 되어 끝난 뒤의 이동이 사라진다.
+     */
     fun dismissDialog() = _uiState.update {
-        if (it.dialog == SettingsDialog.ACCESS_LOST) it else it.copy(dialog = null)
+        if (it.isWorking || it.dialog == SettingsDialog.ACCESS_LOST) it else it.copy(dialog = null)
     }
 
     /** 대화상자의 확인 버튼. */
     fun confirmDialog() {
         val state = _uiState.value
         if (state.isWorking) return
-        val planId = state.plan?.id
         when (state.dialog) {
             SettingsDialog.CONFIRM_REMOVE_COMPANION -> perform(planId) { planRepository.removeCompanion(it) }
             SettingsDialog.CONFIRM_LEAVE -> perform(planId, exitOnSuccess = true) { planRepository.leave(it) }
@@ -129,7 +133,8 @@ class PlanSettingsViewModel(
     }
 
     private suspend fun exitNow() {
-        val destination = currentPlan.moveToRemainingPlan(planRepository)
+        // 삭제, 나가기, 접근 상실 모두 이 식단표는 더 볼 수 없으므로 후보에서 뺀다.
+        val destination = currentPlan.moveToRemainingPlan(planRepository, exclude = planId)
         _uiState.update { it.copy(dialog = null, exitTo = destination) }
     }
 

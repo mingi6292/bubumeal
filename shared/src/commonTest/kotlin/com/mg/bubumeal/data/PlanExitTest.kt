@@ -36,4 +36,18 @@ class PlanExitTest {
         assertEquals(PlanExitDestination.START, destination)
         assertNull(current.selected.value)
     }
+
+    @Test
+    fun excludedPlan_isNeverPickedAgain() = runTest {
+        // 서버의 목록이 아직 잃은 식단표를 담고 있어도 다시 고르지 않는다. 고르면 같은 안내가 되풀이된다.
+        val current = CurrentPlan().apply { select(joinedA) }
+        val stale = FakePlanRepository(listOf(joinedA))
+        assertEquals(PlanExitDestination.START, current.moveToRemainingPlan(stale, exclude = joinedA.id))
+        assertNull(current.selected.value)
+
+        val stillHasMine = FakePlanRepository(listOf(mine, joinedA))
+        current.select(mine)
+        assertEquals(PlanExitDestination.WEEKLY, current.moveToRemainingPlan(stillHasMine, exclude = mine.id))
+        assertEquals(joinedA, current.selected.value)
+    }
 }

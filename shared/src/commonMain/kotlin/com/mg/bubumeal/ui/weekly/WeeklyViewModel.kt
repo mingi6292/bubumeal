@@ -150,7 +150,7 @@ class WeeklyViewModel(
     fun confirmAccessLost() {
         if (!_uiState.value.accessLost) return
         viewModelScope.launch {
-            val destination = currentPlan.moveToRemainingPlan(planRepository)
+            val destination = currentPlan.moveToRemainingPlan(planRepository, exclude = _uiState.value.plan?.id)
             _uiState.update {
                 it.copy(
                     accessLost = false,

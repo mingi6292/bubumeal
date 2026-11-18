@@ -11,6 +11,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -27,6 +28,7 @@ fun PlanSwitchScreen(
     state: PlanSwitchUiState,
     onSelect: (PlanSummary) -> Unit,
     onEnterCode: () -> Unit,
+    onCreateOwn: () -> Unit,
     onBack: () -> Unit,
 ) {
     Scaffold(
@@ -54,6 +56,15 @@ fun PlanSwitchScreen(
             }
             Button(onClick = onEnterCode, modifier = Modifier.padding(16.dp)) {
                 Text("공유 코드 입력")
+            }
+            if (state.showCreateOwn) {
+                OutlinedButton(
+                    onClick = onCreateOwn,
+                    enabled = !state.isCreating && !state.created,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                ) {
+                    Text("내 식단표 만들기")
+                }
             }
         }
     }
