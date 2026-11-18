@@ -19,6 +19,9 @@ import com.mg.bubumeal.ui.codeinput.CodeInputScreen
 import com.mg.bubumeal.ui.codeinput.CodeInputViewModel
 import com.mg.bubumeal.ui.issuecode.IssueCodeScreen
 import com.mg.bubumeal.ui.issuecode.IssueCodeViewModel
+import com.mg.bubumeal.ui.login.LoginDestination
+import com.mg.bubumeal.ui.login.LoginScreen
+import com.mg.bubumeal.ui.login.LoginViewModel
 import com.mg.bubumeal.ui.planswitch.PlanSwitchScreen
 import com.mg.bubumeal.ui.planswitch.PlanSwitchViewModel
 import com.mg.bubumeal.ui.weekly.WeeklyScreen
@@ -28,17 +31,20 @@ import com.mg.bubumeal.ui.weekly.WeeklyViewModel
 fun AppNavHost(container: AppContainer, navController: NavHostController = rememberNavController()) {
     NavHost(navController = navController, startDestination = LoginRoute) {
         composable<LoginRoute> { entry ->
-            PlaceholderScreen(
-                title = "로그인",
-                actions = listOf(
-                    "가짜 로그인" to {
-                        // 로그인 화면을 백스택에서 지워, 뒤로 가기로 돌아오지 않게 한다.
-                        navController.navigateFrom(entry, StartRoute) {
-                            popUpTo<LoginRoute> { inclusive = true }
-                        }
-                    },
-                ),
-            )
+            val vm = viewModel { LoginViewModel(container.socialLogin, container.planRepository) }
+            val state by vm.uiState.collectAsStateWithLifecycle()
+            LaunchedEffect(state.destination) {
+                val route: Any = when (state.destination) {
+                    LoginDestination.WEEKLY -> WeeklyRoute
+                    LoginDestination.START -> StartRoute
+                    null -> return@LaunchedEffect
+                }
+                // 로그인 화면을 백스택에서 지워, 뒤로 가기로 돌아오지 않게 한다.
+                navController.navigateFrom(entry, route) {
+                    popUpTo<LoginRoute> { inclusive = true }
+                }
+            }
+            LoginScreen(state = state, onLogin = vm::login)
         }
         composable<StartRoute> { entry ->
             PlaceholderScreen(
