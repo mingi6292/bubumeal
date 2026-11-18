@@ -1,17 +1,23 @@
 package com.mg.bubumeal.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.mg.bubumeal.AppContainer
 import com.mg.bubumeal.ui.PlaceholderScreen
+import com.mg.bubumeal.ui.weekly.WeeklyScreen
+import com.mg.bubumeal.ui.weekly.WeeklyViewModel
 
 @Composable
-fun AppNavHost(navController: NavHostController = rememberNavController()) {
+fun AppNavHost(container: AppContainer, navController: NavHostController = rememberNavController()) {
     NavHost(navController = navController, startDestination = LoginRoute) {
         composable<LoginRoute> { entry ->
             PlaceholderScreen(
@@ -54,12 +60,22 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             )
         }
         composable<WeeklyRoute> { entry ->
-            PlaceholderScreen(
-                title = "주간 식단표",
-                actions = listOf(
-                    "식단표 전환" to { navController.navigateFrom(entry, PlanSwitchRoute) },
-                    "설정" to { navController.navigateFrom(entry, PlanSettingsRoute) },
-                ),
+            // 이 화면(백스택 항목)에 묶인 ViewModel. 화면을 회전해도 같은 객체가 유지된다.
+            val vm = viewModel {
+                WeeklyViewModel(container.mealRepository, container.planRepository, container.currentPlan)
+            }
+            val state by vm.uiState.collectAsStateWithLifecycle()
+            WeeklyScreen(
+                state = state,
+                onPreviousWeek = vm::previousWeek,
+                onNextWeek = vm::nextWeek,
+                onCurrentWeek = vm::goToCurrentWeek,
+                onCellClick = vm::openEditor,
+                onSwitchPlan = { navController.navigateFrom(entry, PlanSwitchRoute) },
+                onOpenSettings = { navController.navigateFrom(entry, PlanSettingsRoute) },
+                onSave = vm::saveMeal,
+                onDelete = vm::deleteMeal,
+                onDismissEditor = vm::closeEditor,
             )
         }
         composable<PlanSwitchRoute> { entry ->
