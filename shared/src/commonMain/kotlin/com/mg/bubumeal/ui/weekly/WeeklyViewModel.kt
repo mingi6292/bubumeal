@@ -128,7 +128,8 @@ class WeeklyViewModel(
         viewModelScope.launch {
             if (mealRepository.saveMeal(plan.id, cell, text) == PlanAccess.Lost) {
                 // 저장하는 사이 다른 식단표로 옮겼다면, 지금 보는 식단표의 일이 아니므로 안내하지 않는다.
-                _uiState.update { if (it.plan == plan) it.copy(editingCell = null, accessLost = true) else it }
+                // 같은 식단표인지는 id로 본다. 동반자 유무 같은 정보만 바뀌어도 같은 식단표다.
+                _uiState.update { if (it.plan?.id == plan.id) it.copy(editingCell = null, accessLost = true) else it }
                 return@launch
             }
             _uiState.update {
@@ -143,14 +144,19 @@ class WeeklyViewModel(
         }
     }
 
+    private var exitingLostPlan = false
+
     /**
      * 접근 상실 안내에서 확인을 눌렀다. 남은 식단표가 있으면 이 화면에서 그 식단표를 다시 불러오고
      * (CurrentPlan이 바뀌면 위의 collectLatest가 불러온다), 없으면 시작 화면으로 가라는 이벤트를 남긴다.
      */
     fun confirmAccessLost() {
-        if (!_uiState.value.accessLost) return
+        // 안내는 이동 준비가 끝날 때까지 띄워 두고, 그 사이 다시 눌러도 한 번만 처리한다.
+        if (!_uiState.value.accessLost || exitingLostPlan) return
+        exitingLostPlan = true
         viewModelScope.launch {
             val destination = currentPlan.moveToRemainingPlan(planRepository, exclude = _uiState.value.plan?.id)
+            exitingLostPlan = false
             _uiState.update {
                 it.copy(
                     accessLost = false,

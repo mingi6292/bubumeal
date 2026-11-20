@@ -137,7 +137,9 @@ fun AppNavHost(container: AppContainer, navController: NavHostController = remem
             )
         }
         composable<PlanSettingsRoute> { entry ->
-            val vm = viewModel { PlanSettingsViewModel(container.planRepository, container.currentPlan) }
+            val vm = viewModel {
+                PlanSettingsViewModel(container.planRepository, container.currentPlan, container.debugLoseAccess)
+            }
             val state by vm.uiState.collectAsStateWithLifecycle()
             // 삭제, 나가기, 접근 상실 뒤: 남은 식단표의 주간 식단표나 시작 화면으로 가고, 뒤로 가기로 돌아오지 않게 백스택을 비운다.
             LaunchedEffect(state.exitTo) {
@@ -160,18 +162,30 @@ fun AppNavHost(container: AppContainer, navController: NavHostController = remem
                 onDismissDialog = vm::dismissDialog,
                 // 해제, 나가기, 삭제를 보내는 중에는 떠나지 않는다. 떠나면 끝난 뒤의 이동이 사라진다.
                 onBack = { if (!state.isWorking) navController.popBackStack(entry.destination.id, inclusive = true) },
-                onDebugLoseAccess = container.debugLoseAccess?.let { lose ->
-                    { state.plan?.let { lose(it.id) } }
-                },
+                onDebugLoseAccess = vm::debugLoseAccess,
             )
         }
         composable<IssueCodeRoute> { entry ->
-            val vm = viewModel { IssueCodeViewModel(container.shareCodeRepository, container.currentPlan) }
+            val vm = viewModel {
+                IssueCodeViewModel(container.shareCodeRepository, container.currentPlan, container.planRepository)
+            }
             val state by vm.uiState.collectAsStateWithLifecycle()
+            // 접근 상실 안내를 확인하면 설정 화면과 같은 규칙으로 이동한다.
+            LaunchedEffect(state.exitTo) {
+                val route: Any = when (state.exitTo) {
+                    PlanExitDestination.WEEKLY -> WeeklyRoute
+                    PlanExitDestination.START -> StartRoute
+                    null -> return@LaunchedEffect
+                }
+                entry.lifecycle.awaitResumed()
+                navController.navigateClearingBackStack(entry, route)
+                vm.exitHandled()
+            }
             IssueCodeScreen(
                 state = state,
                 onIssue = vm::issue,
                 onBack = { navController.popBackStack(entry.destination.id, inclusive = true) },
+                onConfirmAccessLost = vm::confirmAccessLost,
             )
         }
     }

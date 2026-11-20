@@ -233,4 +233,20 @@ class PlanSettingsViewModelTest {
         advanceUntilIdle()
         assertEquals(PlanExitDestination.START, vm.uiState.value.exitTo)
     }
+
+    @Test
+    fun debugLoseAccess_showsNoticeRightAway() = runTest {
+        val repo = FakePlanRepository(listOf(mineAlone, joined))
+        val vm = PlanSettingsViewModel(repo, CurrentPlan().apply { select(joined) }, debugLoseAccess = repo::loseAccess)
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.canDebugLoseAccess)
+        vm.debugLoseAccess()
+        advanceUntilIdle()
+        assertEquals(SettingsDialog.ACCESS_LOST, vm.uiState.value.dialog)
+    }
+
+    @Test
+    fun withoutDebugHook_debugButtonHidden() = runTest {
+        assertFalse(fixture(listOf(mineAlone)).vm.uiState.value.canDebugLoseAccess)
+    }
 }

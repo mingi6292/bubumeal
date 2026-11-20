@@ -38,6 +38,8 @@ data class PlanSettingsUiState(
     val dialog: SettingsDialog? = null,
     /** 한 번만 처리하는 이동. 화면이 이동한 뒤 [PlanSettingsViewModel.exitHandled]로 지운다. */
     val exitTo: PlanExitDestination? = null,
+    /** 디버그 버튼을 보일지. */
+    val canDebugLoseAccess: Boolean = false,
 ) {
     private val isOwner get() = plan?.role == PlanRole.OWNER
 
@@ -51,9 +53,11 @@ data class PlanSettingsUiState(
 class PlanSettingsViewModel(
     private val planRepository: PlanRepository,
     private val currentPlan: CurrentPlan,
+    /** 디버그용 접근 상실 흉내(가짜 저장소). null이면 버튼을 숨긴다. 서버가 나오면 지운다. */
+    private val debugLoseAccess: ((PlanId) -> Unit)? = null,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(PlanSettingsUiState())
+    private val _uiState = MutableStateFlow(PlanSettingsUiState(canDebugLoseAccess = debugLoseAccess != null))
     val uiState: StateFlow<PlanSettingsUiState> = _uiState.asStateFlow()
 
     /** 이 화면이 다루는 식단표. 화면을 여는 순간 골라 둔 것으로 정하고, 나간 뒤에는 다시 고르지 않는다. */
@@ -96,6 +100,15 @@ class PlanSettingsViewModel(
     }
 
     fun exitHandled() = _uiState.update { it.copy(exitTo = null) }
+
+    /** 디버그: 이 식단표를 볼 수 없게 만든 뒤 바로 다시 읽어, 접근 상실 안내가 곧바로 뜨게 한다. */
+    fun debugLoseAccess() {
+        val lose = debugLoseAccess ?: return
+        val id = planId ?: return
+        if (_uiState.value.isWorking || _uiState.value.dialog != null) return
+        lose(id)
+        viewModelScope.launch { refresh(id) }
+    }
 
     private fun ask(dialog: SettingsDialog) = _uiState.update {
         if (it.isWorking || it.dialog != null || it.plan == null) it else it.copy(dialog = dialog)

@@ -5,6 +5,7 @@ import com.mg.bubumeal.data.FakeMealRepository
 import com.mg.bubumeal.data.FakePlanRepository
 import com.mg.bubumeal.data.MealRepository
 import com.mg.bubumeal.data.PlanExitDestination
+import com.mg.bubumeal.data.PlanRepository
 import com.mg.bubumeal.data.granted
 import com.mg.bubumeal.domain.MAX_MEAL_TEXT_LENGTH
 import com.mg.bubumeal.domain.MealCell
@@ -308,6 +309,51 @@ class WeeklyViewModelTest {
         // 화면이 이동을 마쳤다고 알리면 이벤트를 지운다. 다시 그려져도 두 번 이동하지 않는다.
         vm.exitHandled()
         assertNull(vm.uiState.value.exitTo)
+    }
+
+    @Test
+    fun confirmAccessLost_tappedTwice_movesOnce() = runTest {
+        val plans = FakePlanRepository(listOf(joined, mine))
+        var listCalls = 0
+        val counting = object : PlanRepository by plans {
+            override suspend fun accessiblePlans(): List<PlanSummary> {
+                listCalls++
+                delay(100)
+                return plans.accessiblePlans()
+            }
+        }
+        val current = CurrentPlan().apply { select(joined) }
+        plans.loseAccess(joined.id)
+        val vm = WeeklyViewModel(FakeMealRepository(isAccessible = plans::isAccessible), counting, current, clock, seoul)
+        advanceUntilIdle()
+        listCalls = 0
+        vm.confirmAccessLost()
+        vm.confirmAccessLost()
+        advanceUntilIdle()
+        assertEquals(1, listCalls)
+        assertEquals(mine, current.selected.value)
+    }
+
+    @Test
+    fun saveLost_afterSamePlanWasRefreshed_stillShowsNotice() = runTest {
+        // 저장하는 사이 같은 식단표의 정보(동반자 유무)만 바뀌어도 같은 식단표다. 안내를 건너뛰면 저장 실패를 모른다.
+        val failingSave = object : MealRepository {
+            override suspend fun weeklyMeals(planId: PlanId, week: Week): PlanAccess<WeeklyMeals> =
+                PlanAccess.Granted(WeeklyMeals(week))
+
+            override suspend fun saveMeal(planId: PlanId, cell: MealCell, text: String?): PlanAccess<Unit> {
+                delay(1_000)
+                return PlanAccess.Lost
+            }
+        }
+        val current = CurrentPlan().apply { select(mine) }
+        val vm = viewModel(meals = failingSave, current = current)
+        advanceUntilIdle()
+        vm.saveMeal(monLunch, "김치찌개")
+        advanceTimeBy(10)
+        current.select(mine.copy(hasCompanion = true))
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.accessLost)
     }
 
     /** [slowWeek]를 읽을 때만 1초 늦게, 그 주 첫 칸에 [LATE]를 넣어 돌려준다. */

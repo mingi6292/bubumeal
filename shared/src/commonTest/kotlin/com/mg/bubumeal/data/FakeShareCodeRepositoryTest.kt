@@ -124,4 +124,18 @@ class FakeShareCodeRepositoryTest {
         clock.advance(3.hours)
         assertEquals(JoinResult.Expired, repo.join(issued.code))
     }
+
+    @Test
+    fun issue_lostPlan_accessLost() = runTest {
+        plans.loseAccess(mine.id)
+        assertEquals(IssueResult.AccessLost, repo.issue(mine.id))
+    }
+
+    @Test
+    fun deletingPlan_removesItsIssuedCode() = runTest {
+        // 기획 4.2: 삭제하면 발급한 공유 코드 기록도 함께 영구 삭제된다.
+        val old = assertIs<IssueResult.Issued>(repo.issue(mine.id)).code.code
+        plans.delete(mine.id)
+        assertIs<JoinResult.WrongCode>(repo.join(old))
+    }
 }

@@ -34,8 +34,8 @@ fun PlanSettingsScreen(
     onConfirmDialog: () -> Unit,
     onDismissDialog: () -> Unit,
     onBack: () -> Unit,
-    /** 디버그용 접근 상실 흉내. null이면 버튼을 숨긴다. 서버가 나오면 지운다. */
-    onDebugLoseAccess: (() -> Unit)?,
+    /** 디버그용 접근 상실 흉내. [PlanSettingsUiState.canDebugLoseAccess]일 때만 보인다. 서버가 나오면 지운다. */
+    onDebugLoseAccess: () -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -78,9 +78,10 @@ fun PlanSettingsScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 ) { Text("식단표 삭제") }
             }
-            if (onDebugLoseAccess != null) {
+            if (state.canDebugLoseAccess) {
+                // 동반자: 소유자가 삭제하거나 나를 해제한 상황. 소유자: 다른 기기에서 삭제한 상황.
                 TextButton(onClick = onDebugLoseAccess, enabled = enabled) {
-                    Text("[디버그] 상대가 이 식단표를 지운 것처럼 하기", style = MaterialTheme.typography.bodySmall)
+                    Text("[디버그] 이 식단표에 접근할 수 없게 하기", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
