@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mg.bubumeal.domain.MealCell
 import com.mg.bubumeal.domain.MealSlot
+import com.mg.bubumeal.ui.AccessLostDialog
 import com.mg.bubumeal.ui.dayLabel
 import com.mg.bubumeal.ui.label
 import com.mg.bubumeal.ui.weekRangeLabel
@@ -48,6 +49,7 @@ fun WeeklyScreen(
     onSave: (MealCell, String) -> Unit,
     onDelete: (MealCell) -> Unit,
     onDismissEditor: () -> Unit,
+    onConfirmAccessLost: () -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -95,6 +97,10 @@ fun WeeklyScreen(
             onDelete = { onDelete(cell) },
             onDismiss = onDismissEditor,
         )
+    }
+
+    if (state.accessLost) {
+        AccessLostDialog(onConfirm = onConfirmAccessLost)
     }
 }
 

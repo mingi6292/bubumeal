@@ -26,8 +26,9 @@ class AppContainer(
     clock: Clock = Clock.System,
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ) {
-    private val myPlan = PlanSummary(PlanId("my-plan"), PlanRole.OWNER)
-    private val joinedPlan = PlanSummary(PlanId("joined-plan"), PlanRole.COMPANION)
+    // 내 식단표에는 동반자가 있는 것으로 시작한다. 설정에서 해제하면 발급 버튼이 보이는 것을 확인할 수 있다.
+    private val myPlan = PlanSummary(PlanId("my-plan"), PlanRole.OWNER, hasCompanion = true)
+    private val joinedPlan = PlanSummary(PlanId("joined-plan"), PlanRole.COMPANION, hasCompanion = true)
 
     private val fakePlanRepository = FakePlanRepository(listOf(myPlan, joinedPlan))
     val planRepository: PlanRepository = fakePlanRepository
@@ -45,8 +46,13 @@ class AppContainer(
                     MealCell(days[2], MealSlot.DINNER) to "카레",
                 ),
             ),
+            // 목록에서 빠진(삭제, 나가기, 접근 상실) 식단표의 끼니를 읽거나 쓰면 접근 상실이 된다.
+            isAccessible = fakePlanRepository::isAccessible,
         )
     }
+
+    /** 디버그용: 상대가 식단표를 지운 것처럼 접근을 잃게 한다. 서버가 나오면 null로 두고 지운다. */
+    val debugLoseAccess: ((PlanId) -> Unit)? = fakePlanRepository::loseAccess
 
     val currentPlan = CurrentPlan()
 

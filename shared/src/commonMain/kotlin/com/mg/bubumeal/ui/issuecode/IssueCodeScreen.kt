@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.mg.bubumeal.ui.AccessLostDialog
 import com.mg.bubumeal.ui.dateTimeLabel
 import kotlinx.datetime.TimeZone
 
@@ -30,6 +31,7 @@ fun IssueCodeScreen(
     state: IssueCodeUiState,
     onIssue: () -> Unit,
     onBack: () -> Unit,
+    onConfirmAccessLost: () -> Unit,
 ) {
     val timeZone = remember { TimeZone.currentSystemDefault() }
 
@@ -78,5 +80,9 @@ fun IssueCodeScreen(
                 )
             }
         }
+    }
+
+    if (state.accessLost) {
+        AccessLostDialog(onConfirm = onConfirmAccessLost)
     }
 }

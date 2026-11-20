@@ -14,8 +14,7 @@ import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.LaunchedEffect
 import com.mg.bubumeal.AppContainer
-import com.mg.bubumeal.domain.PlanRole
-import com.mg.bubumeal.ui.PlaceholderScreen
+import com.mg.bubumeal.data.PlanExitDestination
 import com.mg.bubumeal.ui.codeinput.CodeInputScreen
 import com.mg.bubumeal.ui.codeinput.CodeInputViewModel
 import com.mg.bubumeal.ui.issuecode.IssueCodeScreen
@@ -25,6 +24,10 @@ import com.mg.bubumeal.ui.login.LoginScreen
 import com.mg.bubumeal.ui.login.LoginViewModel
 import com.mg.bubumeal.ui.planswitch.PlanSwitchScreen
 import com.mg.bubumeal.ui.planswitch.PlanSwitchViewModel
+import com.mg.bubumeal.ui.plansettings.PlanSettingsScreen
+import com.mg.bubumeal.ui.plansettings.PlanSettingsViewModel
+import com.mg.bubumeal.ui.start.StartScreen
+import com.mg.bubumeal.ui.start.StartViewModel
 import com.mg.bubumeal.ui.weekly.WeeklyScreen
 import com.mg.bubumeal.ui.weekly.WeeklyViewModel
 
@@ -50,16 +53,19 @@ fun AppNavHost(container: AppContainer, navController: NavHostController = remem
             LoginScreen(state = state, onLogin = vm::login)
         }
         composable<StartRoute> { entry ->
-            PlaceholderScreen(
-                title = "시작",
-                actions = listOf(
-                    "식단표 만들기" to {
-                        navController.navigateFrom(entry, WeeklyRoute) {
-                            popUpTo<StartRoute> { inclusive = true }
-                        }
-                    },
-                    "공유 코드 입력" to { navController.navigateFrom(entry, CodeInputRoute) },
-                ),
+            val vm = viewModel { StartViewModel(container.planRepository, container.currentPlan) }
+            val state by vm.uiState.collectAsStateWithLifecycle()
+            // 만들기에 성공하면 ViewModel이 이미 CurrentPlan을 새 식단표로 바꿔 두었다.
+            LaunchedEffect(state.goToWeekly) {
+                if (!state.goToWeekly) return@LaunchedEffect
+                entry.lifecycle.awaitResumed()
+                navController.navigateClearingBackStack(entry, WeeklyRoute)
+                vm.navigationHandled()
+            }
+            StartScreen(
+                state = state,
+                onCreate = vm::create,
+                onEnterCode = { navController.navigateFrom(entry, CodeInputRoute) },
             )
         }
         composable<CodeInputRoute> { entry ->
@@ -71,9 +77,7 @@ fun AppNavHost(container: AppContainer, navController: NavHostController = remem
                 entry.lifecycle.awaitResumed()
                 // 어디서 왔든 백스택을 모두 비우고 주간 식단표 하나만 남긴다.
                 // 그래프 전체를 지우는 방식이다. 에뮬레이터에서 확인함. WeeklyRoute에 인자가 생기면 다시 확인한다.
-                navController.navigateFrom(entry, WeeklyRoute) {
-                    popUpTo(navController.graph.id) { inclusive = true }
-                }
+                navController.navigateClearingBackStack(entry, WeeklyRoute)
             }
             CodeInputScreen(
                 state = state,
@@ -88,6 +92,13 @@ fun AppNavHost(container: AppContainer, navController: NavHostController = remem
                 WeeklyViewModel(container.mealRepository, container.planRepository, container.currentPlan)
             }
             val state by vm.uiState.collectAsStateWithLifecycle()
+            // 접근 상실 뒤 남은 식단표가 없을 때만 시작 화면으로 간다. 남아 있으면 이 화면이 그 식단표를 다시 불러온다.
+            LaunchedEffect(state.exitTo) {
+                if (state.exitTo != PlanExitDestination.START) return@LaunchedEffect
+                entry.lifecycle.awaitResumed()
+                navController.navigateClearingBackStack(entry, StartRoute)
+                vm.exitHandled()
+            }
             WeeklyScreen(
                 state = state,
                 onPreviousWeek = vm::previousWeek,
@@ -99,6 +110,7 @@ fun AppNavHost(container: AppContainer, navController: NavHostController = remem
                 onSave = vm::saveMeal,
                 onDelete = vm::deleteMeal,
                 onDismissEditor = vm::closeEditor,
+                onConfirmAccessLost = vm::confirmAccessLost,
             )
         }
         composable<PlanSwitchRoute> { entry ->
@@ -106,6 +118,13 @@ fun AppNavHost(container: AppContainer, navController: NavHostController = remem
             val state by vm.uiState.collectAsStateWithLifecycle()
             // 주간 식단표까지만 돌아간다. 빠르게 두 번 눌러도 주간 식단표를 지나 앱이 닫히지 않는다.
             val backToWeekly = { navController.popBackStack<WeeklyRoute>(inclusive = false) }
+            // 내 식단표를 만들면 ViewModel이 CurrentPlan을 새 식단표로 바꿔 두었으므로, 주간 식단표로 돌아가기만 하면 된다.
+            LaunchedEffect(state.created) {
+                if (!state.created) return@LaunchedEffect
+                entry.lifecycle.awaitResumed()
+                backToWeekly()
+                vm.createdHandled()
+            }
             PlanSwitchScreen(
                 state = state,
                 onSelect = { plan ->
@@ -113,29 +132,60 @@ fun AppNavHost(container: AppContainer, navController: NavHostController = remem
                     backToWeekly()
                 },
                 onEnterCode = { navController.navigateFrom(entry, CodeInputRoute) },
+                onCreateOwn = vm::createOwn,
                 onBack = { backToWeekly() },
             )
         }
         composable<PlanSettingsRoute> { entry ->
-            val plan by container.currentPlan.selected.collectAsStateWithLifecycle()
-            PlaceholderScreen(
-                title = "식단표 설정",
-                // 발급은 소유자만 (docs/screen-flow.md 4장). 동반자가 있으면 숨기는 임시 결정은
-                // 식단표에 동반자 정보가 생긴 뒤(설정 화면 단계)에 넣는다.
-                actions = if (plan?.role == PlanRole.OWNER) {
-                    listOf("공유 코드 발급" to { navController.navigateFrom(entry, IssueCodeRoute) })
-                } else {
-                    emptyList()
-                },
+            val vm = viewModel {
+                PlanSettingsViewModel(container.planRepository, container.currentPlan, container.debugLoseAccess)
+            }
+            val state by vm.uiState.collectAsStateWithLifecycle()
+            // 삭제, 나가기, 접근 상실 뒤: 남은 식단표의 주간 식단표나 시작 화면으로 가고, 뒤로 가기로 돌아오지 않게 백스택을 비운다.
+            LaunchedEffect(state.exitTo) {
+                val route: Any = when (state.exitTo) {
+                    PlanExitDestination.WEEKLY -> WeeklyRoute
+                    PlanExitDestination.START -> StartRoute
+                    null -> return@LaunchedEffect
+                }
+                entry.lifecycle.awaitResumed()
+                navController.navigateClearingBackStack(entry, route)
+                vm.exitHandled()
+            }
+            PlanSettingsScreen(
+                state = state,
+                onIssueCode = { navController.navigateFrom(entry, IssueCodeRoute) },
+                onRemoveCompanion = vm::requestRemoveCompanion,
+                onLeave = vm::requestLeave,
+                onDelete = vm::requestDelete,
+                onConfirmDialog = vm::confirmDialog,
+                onDismissDialog = vm::dismissDialog,
+                // 해제, 나가기, 삭제를 보내는 중에는 떠나지 않는다. 떠나면 끝난 뒤의 이동이 사라진다.
+                onBack = { if (!state.isWorking) navController.popBackStack(entry.destination.id, inclusive = true) },
+                onDebugLoseAccess = vm::debugLoseAccess,
             )
         }
         composable<IssueCodeRoute> { entry ->
-            val vm = viewModel { IssueCodeViewModel(container.shareCodeRepository, container.currentPlan) }
+            val vm = viewModel {
+                IssueCodeViewModel(container.shareCodeRepository, container.currentPlan, container.planRepository)
+            }
             val state by vm.uiState.collectAsStateWithLifecycle()
+            // 접근 상실 안내를 확인하면 설정 화면과 같은 규칙으로 이동한다.
+            LaunchedEffect(state.exitTo) {
+                val route: Any = when (state.exitTo) {
+                    PlanExitDestination.WEEKLY -> WeeklyRoute
+                    PlanExitDestination.START -> StartRoute
+                    null -> return@LaunchedEffect
+                }
+                entry.lifecycle.awaitResumed()
+                navController.navigateClearingBackStack(entry, route)
+                vm.exitHandled()
+            }
             IssueCodeScreen(
                 state = state,
                 onIssue = vm::issue,
                 onBack = { navController.popBackStack(entry.destination.id, inclusive = true) },
+                onConfirmAccessLost = vm::confirmAccessLost,
             )
         }
     }
@@ -154,6 +204,15 @@ suspend fun Lifecycle.awaitResumed() {
  * 버튼을 빠르게 두 번 누르면 두 번째 탭은 화면이 이미 바뀌는 중이라 무시되어, 같은 화면이 두 번 쌓이지 않는다.
  * 맨 위가 이미 같은 화면이면 새로 쌓지 않는다(launchSingleTop).
  */
+/**
+ * [route]로 가면서 백스택을 모두 비운다. 그래프 전체(graph.id)까지 지우므로 어디서 왔든 [route] 하나만 남고,
+ * 뒤로 가기를 누르면 앱이 닫힌다. 식단표를 만들거나 참여한 뒤, 식단표를 잃은 뒤에 쓴다.
+ */
+private fun <T : Any> NavHostController.navigateClearingBackStack(from: NavBackStackEntry, route: T) =
+    navigateFrom(from, route) {
+        popUpTo(graph.id) { inclusive = true }
+    }
+
 private fun <T : Any> NavHostController.navigateFrom(
     from: NavBackStackEntry,
     route: T,

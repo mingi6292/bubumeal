@@ -60,6 +60,10 @@ fun LoginProvider.label(): String = when (this) {
     LoginProvider.APPLE -> "애플"
 }
 
+/** 접근 상실 안내 (기획 5장, screen-flow 5장). */
+const val ACCESS_LOST_TITLE = "더 이상 볼 수 없는 식단표"
+const val ACCESS_LOST_MESSAGE = "연결이 해제되었거나 식단표가 삭제되었어요."
+
 /** 로그인 실패 안내 (기획 5장). */
 fun LoginResult.Failure.message(): String = when (this) {
     LoginResult.Cancelled -> "로그인을 취소했어요."

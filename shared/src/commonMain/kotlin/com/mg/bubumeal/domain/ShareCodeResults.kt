@@ -48,4 +48,7 @@ sealed interface IssueResult {
 
     /** 동반자가 발급하려 했다 (기획 5장 권한 에러). */
     data object NotOwner : IssueResult
+
+    /** 식단표가 삭제되었거나 더 볼 수 없다 (기획 5장 접근 상실). */
+    data object AccessLost : IssueResult
 }
