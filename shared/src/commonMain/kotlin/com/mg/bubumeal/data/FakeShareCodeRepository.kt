@@ -46,6 +46,7 @@ class FakeShareCodeRepository(
     override suspend fun join(code: String): JoinResult {
         val now = clock.now()
         blockedUntil?.let { if (now < it) return JoinResult.Blocked(it) else blockedUntil = null }
+        forgetCodesOfGonePlans()
 
         issuedByPlan.values.firstOrNull { it.code == code }?.let { own ->
             return if (now < own.expiresAt) JoinResult.OwnCode else JoinResult.Expired
@@ -60,18 +61,25 @@ class FakeShareCodeRepository(
     }
 
     override suspend fun issue(planId: PlanId): IssueResult {
+        forgetCodesOfGonePlans()
         val plan = planRepository.accessiblePlans().firstOrNull { it.id == planId }
-        if (plan?.role != PlanRole.OWNER) return IssueResult.NotOwner
+            ?: return IssueResult.AccessLost
+        if (plan.role != PlanRole.OWNER) return IssueResult.NotOwner
         // 새로 발급하면 이전 코드를 덮어써서 바로 무효가 된다.
         val issued = IssuedCode(newCode(), clock.now() + SHARE_CODE_VALIDITY)
         issuedByPlan[planId] = issued
         return IssueResult.Issued(issued)
     }
 
+    /** 기획 4.2: 식단표를 삭제하면 발급한 코드 기록도 함께 사라진다. 목록에 없는 식단표의 코드는 잊는다. */
+    private fun forgetCodesOfGonePlans() {
+        issuedByPlan.keys.retainAll { planRepository.isAccessible(it) }
+    }
+
     private fun joinNewPlan(): JoinResult {
         successUsed = true
         joinedCount++
-        val plan = PlanSummary(PlanId("joined-by-code-$joinedCount"), PlanRole.COMPANION)
+        val plan = PlanSummary(PlanId("joined-by-code-$joinedCount"), PlanRole.COMPANION, hasCompanion = true)
         planRepository.add(plan)
         return JoinResult.Joined(plan)
     }

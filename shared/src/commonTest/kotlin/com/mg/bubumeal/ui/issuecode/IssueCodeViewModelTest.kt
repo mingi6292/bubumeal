@@ -4,6 +4,7 @@ import com.mg.bubumeal.data.CurrentPlan
 import com.mg.bubumeal.data.FakePlanRepository
 import com.mg.bubumeal.data.FakeShareCodeRepository
 import com.mg.bubumeal.data.MutableClock
+import com.mg.bubumeal.data.PlanExitDestination
 import com.mg.bubumeal.domain.PlanId
 import com.mg.bubumeal.domain.PlanRole
 import com.mg.bubumeal.domain.PlanSummary
@@ -31,7 +32,8 @@ class IssueCodeViewModelTest {
     private val mine = PlanSummary(PlanId("mine"), PlanRole.OWNER)
     private val joined = PlanSummary(PlanId("joined"), PlanRole.COMPANION)
     private val clock = MutableClock()
-    private val repo = FakeShareCodeRepository(FakePlanRepository(listOf(mine, joined)), clock)
+    private val plans = FakePlanRepository(listOf(mine, joined))
+    private val repo = FakeShareCodeRepository(plans, clock)
 
     @BeforeTest
     fun setUp() = Dispatchers.setMain(dispatcher)
@@ -39,7 +41,8 @@ class IssueCodeViewModelTest {
     @AfterTest
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel(plan: PlanSummary) = IssueCodeViewModel(repo, CurrentPlan().apply { select(plan) })
+    private fun viewModel(plan: PlanSummary, current: CurrentPlan = CurrentPlan().apply { select(plan) }) =
+        IssueCodeViewModel(repo, current, plans)
 
     @Test
     fun initially_nothingIssued() {
@@ -76,5 +79,22 @@ class IssueCodeViewModelTest {
         advanceUntilIdle()
         assertTrue(vm.uiState.value.notOwner)
         assertNull(vm.uiState.value.issued)
+    }
+
+    @Test
+    fun issue_lostPlan_showsAccessLostThenExits() = runTest {
+        val current = CurrentPlan().apply { select(mine) }
+        val vm = viewModel(mine, current)
+        plans.loseAccess(mine.id)
+        vm.issue()
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.accessLost)
+        assertFalse(vm.uiState.value.notOwner)
+
+        vm.confirmAccessLost()
+        advanceUntilIdle()
+        assertFalse(vm.uiState.value.accessLost)
+        assertEquals(PlanExitDestination.WEEKLY, vm.uiState.value.exitTo)
+        assertEquals(joined, current.selected.value)
     }
 }
