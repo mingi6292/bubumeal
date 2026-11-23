@@ -12,6 +12,8 @@ class BubuMealApplication : Application() {
         super.onCreate()
         AndroidLoginHost.googleWebClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID
         AndroidLoginHost.kakaoNativeAppKey = BuildConfig.KAKAO_NATIVE_APP_KEY
+        AndroidLoginHost.naverClientId = BuildConfig.NAVER_CLIENT_ID
+        AndroidLoginHost.naverClientSecret = BuildConfig.NAVER_CLIENT_SECRET
         AndroidLoginHost.initSdks(this)
     }
 }

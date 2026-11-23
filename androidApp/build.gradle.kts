@@ -30,6 +30,8 @@ fun localProperty(name: String): String =
 
 val googleWebClientId = localProperty("GOOGLE_WEB_CLIENT_ID")
 val kakaoNativeAppKey = localProperty("KAKAO_NATIVE_APP_KEY")
+val naverClientId = localProperty("NAVER_CLIENT_ID")
+val naverClientSecret = localProperty("NAVER_CLIENT_SECRET")
 
 android {
     namespace = "com.mg.bubumeal"
@@ -43,6 +45,8 @@ android {
         versionName = "1.0"
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
         buildConfigField("String", "KAKAO_NATIVE_APP_KEY", "\"$kakaoNativeAppKey\"")
+        buildConfigField("String", "NAVER_CLIENT_ID", "\"$naverClientId\"")
+        buildConfigField("String", "NAVER_CLIENT_SECRET", "\"$naverClientSecret\"")
         // 매니페스트의 ${KAKAO_NATIVE_APP_KEY} 자리에 들어간다. 카카오 로그인이 끝나고 앱으로 돌아오는 주소(kakao{키}://oauth)를 만든다.
         manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] = kakaoNativeAppKey
     }
