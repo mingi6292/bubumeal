@@ -2,7 +2,6 @@ package com.mg.bubumeal.data
 
 import com.mg.bubumeal.domain.LoginProvider
 import com.mg.bubumeal.domain.LoginResult
-import com.mg.bubumeal.domain.ProviderToken
 import kotlinx.coroutines.delay
 
 // 실제 SDK는 로그인 창을 띄울 Activity가 필요하다. SDK를 붙일 때 platformSocialLogin()의 인자로 정한다.
@@ -19,6 +18,6 @@ private class FakeAndroidSocialLogin : SocialLogin {
             // Android에는 애플 SDK가 없어 웹 로그인 방식(브라우저/커스텀 탭으로 애플 로그인 페이지)으로 처리할 자리다.
             LoginProvider.APPLE -> Unit
         }
-        return LoginResult.Success(ProviderToken(provider, "fake-android-${provider.name.lowercase()}-token"))
+        return LoginResult.Success(fakeProviderToken("android", provider))
     }
 }

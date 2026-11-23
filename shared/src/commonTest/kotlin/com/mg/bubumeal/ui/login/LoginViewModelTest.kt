@@ -8,6 +8,7 @@ import com.mg.bubumeal.domain.PlanId
 import com.mg.bubumeal.domain.PlanRole
 import com.mg.bubumeal.domain.PlanSummary
 import com.mg.bubumeal.domain.ProviderToken
+import com.mg.bubumeal.domain.TokenKind
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -36,7 +37,7 @@ private class ScriptedSocialLogin(var next: LoginResult, var gate: CompletableDe
 @OptIn(ExperimentalCoroutinesApi::class)
 class LoginViewModelTest {
     private val dispatcher = StandardTestDispatcher()
-    private val success = LoginResult.Success(ProviderToken(LoginProvider.KAKAO, "token"))
+    private val success = LoginResult.Success(ProviderToken(LoginProvider.KAKAO, TokenKind.ACCESS, "token"))
     private val somePlan = PlanSummary(PlanId("mine"), PlanRole.OWNER)
 
     @BeforeTest

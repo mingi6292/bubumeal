@@ -6,8 +6,14 @@ package com.mg.bubumeal.domain
 /** 지원하는 제공자. 선언 순서가 로그인 버튼 순서다. */
 enum class LoginProvider { KAKAO, NAVER, GOOGLE, APPLE }
 
+/**
+ * 제공자 토큰의 종류. 서버가 어느 쪽을 받을지는 기획 9장 협의 항목이라 아직 정해지지 않았다.
+ * 앱은 제공자에게서 받은 그대로의 종류를 함께 담아 둘 뿐이고, 어느 쪽을 보낼지는 서버가 정해지면 고른다.
+ */
+enum class TokenKind { ID, ACCESS }
+
 /** 제공자가 준 토큰(ID 토큰 또는 access 토큰). 서버로 보내 검증받을 값이다. */
-data class ProviderToken(val provider: LoginProvider, val value: String)
+data class ProviderToken(val provider: LoginProvider, val kind: TokenKind, val value: String)
 
 /** 제공자 로그인 결과. */
 sealed interface LoginResult {

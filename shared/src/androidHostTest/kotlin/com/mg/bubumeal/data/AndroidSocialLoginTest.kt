@@ -2,7 +2,6 @@ package com.mg.bubumeal.data
 
 import com.mg.bubumeal.domain.LoginProvider
 import com.mg.bubumeal.domain.LoginResult
-import com.mg.bubumeal.domain.ProviderToken
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -16,7 +15,7 @@ class AndroidSocialLoginTest {
         val login = platformSocialLogin()
         LoginProvider.entries.forEach { provider ->
             assertEquals(
-                LoginResult.Success(ProviderToken(provider, "fake-android-${provider.name.lowercase()}-token")),
+                LoginResult.Success(fakeProviderToken("android", provider)),
                 login.login(provider),
             )
         }
