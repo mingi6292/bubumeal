@@ -44,6 +44,7 @@ kotlin {
             implementation(libs.androidx.credentials)
             implementation(libs.androidx.credentials.playServicesAuth)
             implementation(libs.googleid)
+            implementation(libs.kakao.user)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)

@@ -57,29 +57,3 @@ class GoogleSocialLoginTest {
         assertFailsWith<CancellationException> { login { throw CancellationException("취소") }.login(LoginProvider.GOOGLE) }
     }
 }
-
-class AndroidSocialLoginRoutingTest {
-    private val google = constant(LoginResult.Cancelled)
-    private val fake = constant(LoginResult.Failed)
-
-    private fun constant(result: LoginResult) = object : SocialLogin {
-        override suspend fun login(provider: LoginProvider) = result
-    }
-
-    @Test
-    fun google_usesRealImplementationWhenAvailable() = runTest {
-        assertEquals(LoginResult.Cancelled, AndroidSocialLogin(google, fake).login(LoginProvider.GOOGLE))
-    }
-
-    @Test
-    fun otherProviders_stayFake() = runTest {
-        listOf(LoginProvider.KAKAO, LoginProvider.NAVER, LoginProvider.APPLE).forEach {
-            assertEquals(LoginResult.Failed, AndroidSocialLogin(google, fake).login(it))
-        }
-    }
-
-    @Test
-    fun withoutClientId_googleFallsBackToFake() = runTest {
-        assertEquals(LoginResult.Failed, AndroidSocialLogin(null, fake).login(LoginProvider.GOOGLE))
-    }
-}

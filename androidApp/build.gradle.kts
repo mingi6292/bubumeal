@@ -19,13 +19,17 @@ dependencies {
     debugImplementation(libs.compose.uiTooling)
 }
 
-// 웹 클라이언트 ID는 git에 없는 local.properties에서 읽는다. 없거나 비어 있으면 가짜 로그인을 쓴다.
+// 로그인 키는 git에 없는 local.properties에서 읽는다. 없거나 비어 있으면 그 제공자는 가짜 로그인을 쓴다.
 // providers.fileContents를 써야 구성 캐시가 local.properties 변경을 알아챈다.
-val googleWebClientId: String = providers.fileContents(rootProject.layout.projectDirectory.file("local.properties"))
-    .asText
-    .map { text -> text.lineSequence().map { it.trim() }.firstOrNull { it.startsWith("GOOGLE_WEB_CLIENT_ID=") }?.substringAfter("=")?.trim().orEmpty() }
-    .orElse("")
-    .get()
+fun localProperty(name: String): String =
+    providers.fileContents(rootProject.layout.projectDirectory.file("local.properties"))
+        .asText
+        .map { text -> text.lineSequence().map { it.trim() }.firstOrNull { it.startsWith("$name=") }?.substringAfter("=")?.trim().orEmpty() }
+        .orElse("")
+        .get()
+
+val googleWebClientId = localProperty("GOOGLE_WEB_CLIENT_ID")
+val kakaoNativeAppKey = localProperty("KAKAO_NATIVE_APP_KEY")
 
 android {
     namespace = "com.mg.bubumeal"
@@ -38,6 +42,9 @@ android {
         versionCode = 1
         versionName = "1.0"
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+        buildConfigField("String", "KAKAO_NATIVE_APP_KEY", "\"$kakaoNativeAppKey\"")
+        // 매니페스트의 ${KAKAO_NATIVE_APP_KEY} 자리에 들어간다. 카카오 로그인이 끝나고 앱으로 돌아오는 주소(kakao{키}://oauth)를 만든다.
+        manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] = kakaoNativeAppKey
     }
     packaging {
         resources {

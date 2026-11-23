@@ -1,6 +1,8 @@
 package com.mg.bubumeal.data
 
 import android.app.Activity
+import android.app.Application
+import com.kakao.sdk.common.KakaoSdk
 import java.lang.ref.WeakReference
 
 /**
@@ -16,6 +18,15 @@ object AndroidLoginHost {
     /** 구글 웹 클라이언트 ID. 비어 있으면 구글도 가짜 로그인을 쓴다. */
     @Volatile
     var googleWebClientId: String = ""
+
+    /** 카카오 네이티브 앱 키. 비어 있으면 카카오도 가짜 로그인을 쓴다. */
+    @Volatile
+    var kakaoNativeAppKey: String = ""
+
+    /** 키를 채운 뒤 `Application.onCreate`에서 한 번 부른다. 키가 있는 제공자의 SDK만 초기화한다. */
+    fun initSdks(application: Application) {
+        if (kakaoNativeAppKey.isNotBlank()) KakaoSdk.init(application, kakaoNativeAppKey)
+    }
 
     fun attach(activity: Activity) {
         activityRef = WeakReference(activity)
