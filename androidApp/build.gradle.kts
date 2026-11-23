@@ -19,6 +19,14 @@ dependencies {
     debugImplementation(libs.compose.uiTooling)
 }
 
+// 웹 클라이언트 ID는 git에 없는 local.properties에서 읽는다. 없거나 비어 있으면 가짜 로그인을 쓴다.
+// providers.fileContents를 써야 구성 캐시가 local.properties 변경을 알아챈다.
+val googleWebClientId: String = providers.fileContents(rootProject.layout.projectDirectory.file("local.properties"))
+    .asText
+    .map { text -> text.lineSequence().map { it.trim() }.firstOrNull { it.startsWith("GOOGLE_WEB_CLIENT_ID=") }?.substringAfter("=")?.trim().orEmpty() }
+    .orElse("")
+    .get()
+
 android {
     namespace = "com.mg.bubumeal"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -29,6 +37,7 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
     packaging {
         resources {
@@ -50,5 +59,6 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
