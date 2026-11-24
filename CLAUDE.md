@@ -31,6 +31,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 테스트 클래스 하나만 실행: `.\gradlew.bat :shared:testAndroidHostTest --tests "com.mg.bubumeal.SharedCommonTest"`
 - iOS 빌드와 테스트(`:shared:iosSimulatorArm64Test`, Xcode의 `iosApp/`)는 macOS에서만 되므로 이 환경에서는 실행하지 않는다.
 
+CI(`.github/workflows/ci.yml`)는 PR과 main push마다 위 테스트와 디버그 APK 빌드를 ubuntu에서 실행합니다. CI에는 `local.properties`가 없어 로그인은 가짜로 빌드됩니다.
+
 린터/포매터는 아직 설정되어 있지 않습니다(`kotlin.code.style=official`만 있음). Gradle 구성 캐시와 빌드 캐시가 켜져 있습니다.
 
 ## 아키텍처
