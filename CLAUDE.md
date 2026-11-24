@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Windows 환경이라 iOS 빌드는 할 수 없다. 테스트는 `commonTest`와 `androidHostTest`로 확인한다.
 - 터미널 명령은 PowerShell 기준으로 안내한다.
 - 워크트리 세션에서는 에뮬레이터를 직접 켜지 않는다. 에뮬레이터는 사용자가 Android Studio에서 켜 둔 것을 쓴다. 워크트리 안에서 켜면 그 폴더가 잠겨 작업이 끝난 뒤 지울 수 없다.
-- 세션은 `/background` 대신 `/exit`로 끝낸다. 백그라운드로 보낸 세션은 워크트리 폴더를 계속 잡고 있다.
+- 작업은 Orca 워크스페이스(워크트리 + 세션)에서 한다. 세션은 Orca에서 워크스페이스나 탭을 닫아 끝낸다(Orca에서는 `/exit`가 동작하지 않는다). 백그라운드로 보낸 세션은 워크트리 폴더를 계속 잡고 있으니 쓰지 않는다.
 
 ## 프로젝트
 
