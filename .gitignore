@@ -5,6 +5,9 @@
 xcuserdata
 !src/**/build/
 local.properties
+# release 서명 키스토어는 절대 커밋하지 않는다
+*.jks
+*.keystore
 .idea
 .DS_Store
 captures
