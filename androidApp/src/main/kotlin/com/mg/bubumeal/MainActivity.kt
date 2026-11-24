@@ -13,8 +13,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        // 로그인 창을 띄울 Activity와 구글 웹 클라이언트 ID를 shared에 알린다. App()이 로그인 구현을 만들기 전에 해야 한다.
-        AndroidLoginHost.googleWebClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID
+        // 로그인 창을 띄울 Activity를 shared에 알린다. (로그인 키는 BubuMealApplication이 알린다.)
         AndroidLoginHost.attach(this)
 
         setContent {
