@@ -28,6 +28,17 @@ fun localProperty(name: String): String =
         .orElse("")
         .get()
 
+// release 서명 값은 환경변수(CI)를 먼저 보고, 없으면 local.properties(내 PC)에서 읽는다.
+fun signingValue(name: String): String =
+    providers.environmentVariable(name).orElse("").get().ifBlank { localProperty(name) }
+
+val releaseStoreFile = signingValue("RELEASE_STORE_FILE")
+val releaseStorePassword = signingValue("RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = signingValue("RELEASE_KEY_ALIAS")
+val releaseKeyPassword = signingValue("RELEASE_KEY_PASSWORD")
+// 네 값이 모두 있어야 서명한다. 하나라도 비면 서명 없이 빌드해서 키 없는 CI가 깨지지 않게 한다.
+val hasReleaseSigning = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { it.isNotBlank() }
+
 val googleWebClientId = localProperty("GOOGLE_WEB_CLIENT_ID")
 val kakaoNativeAppKey = localProperty("KAKAO_NATIVE_APP_KEY")
 val naverClientId = localProperty("NAVER_CLIENT_ID")
@@ -55,8 +66,21 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(releaseStoreFile)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
