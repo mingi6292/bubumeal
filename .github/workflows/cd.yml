@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # 태그 v1.2.3 → 1.2.3. 형식이 틀리면 빌드 전에 멈춘다.
       - name: 태그에서 버전 읽기
@@ -56,13 +56,13 @@ jobs:
           done
           exit $missing
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
 
       # 배포는 캐시를 읽기만 한다(캐시 쓰기는 CI가 맡는다).
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
         with:
           cache-read-only: true
 

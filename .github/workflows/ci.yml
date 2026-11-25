@@ -18,15 +18,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
 
       # Gradle 캐시를 관리하고 의존성 변경도 추적한다.
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
 
       # local.properties(로그인 키)는 CI에 없으므로 로그인은 가짜 구현으로 빌드된다.
       - name: shared 테스트 (commonTest + androidHostTest)
