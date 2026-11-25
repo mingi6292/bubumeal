@@ -1,0 +1,118 @@
+name: CD
+
+# v1.2.3 형식의 태그를 push하면 서명된 release AAB/APK를 빌드해 GitHub Release에 올린다.
+#   git tag v1.0.0
+#   git push origin v1.0.0
+on:
+  push:
+    tags: ['v*']
+
+# 같은 태그를 두 번 돌리지 않는다. 진행 중인 배포는 취소하지 않는다.
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write # GitHub Release를 만들기 위해 필요
+
+jobs:
+  android-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # 태그 v1.2.3 → 1.2.3. 형식이 틀리면 빌드 전에 멈춘다.
+      - name: 태그에서 버전 읽기
+        id: version
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::태그는 v1.2.3 형식이어야 합니다: $tag"
+            exit 1
+          fi
+          echo "name=${tag#v}" >> "$GITHUB_OUTPUT"
+
+      # 서명 키나 로그인 키가 빠지면 Gradle은 조용히 서명 없이/가짜 로그인으로 빌드한다.
+      # 배포본이 그렇게 나가면 안 되므로 여기서 미리 막는다.
+      - name: 시크릿 확인
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          KAKAO_NATIVE_APP_KEY: ${{ secrets.KAKAO_NATIVE_APP_KEY }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+        run: |
+          missing=0
+          for name in RELEASE_KEYSTORE_BASE64 RELEASE_STORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD \
+                      GOOGLE_WEB_CLIENT_ID KAKAO_NATIVE_APP_KEY NAVER_CLIENT_ID NAVER_CLIENT_SECRET; do
+            if [ -z "${!name}" ]; then
+              echo "::error::GitHub Secret '$name'이 비어 있습니다."
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # 배포는 캐시를 읽기만 한다(캐시 쓰기는 CI가 맡는다).
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: shared 테스트 (commonTest + androidHostTest)
+        run: ./gradlew :shared:testAndroidHostTest
+
+      - name: 키스토어 복원
+        run: echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: release AAB/APK 빌드
+        run: ./gradlew :androidApp:bundleRelease :androidApp:assembleRelease -PappVersionName=${{ steps.version.outputs.name }}
+        env:
+          RELEASE_STORE_FILE: ${{ runner.temp }}/release.jks
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          KAKAO_NATIVE_APP_KEY: ${{ secrets.KAKAO_NATIVE_APP_KEY }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+
+      # 서명되지 않았으면 APK 이름이 androidApp-release-unsigned.apk가 되므로 이름으로도 한 번 더 확인한다.
+      - name: 결과물 정리
+        run: |
+          version="${{ steps.version.outputs.name }}"
+          apk=androidApp/build/outputs/apk/release/androidApp-release.apk
+          aab=androidApp/build/outputs/bundle/release/androidApp-release.aab
+          if [ ! -f "$apk" ]; then
+            echo "::error::서명된 APK가 없습니다. 서명 설정을 확인하세요."
+            ls -R androidApp/build/outputs
+            exit 1
+          fi
+          mkdir -p dist
+          cp "$apk" "dist/bubumeal-$version.apk"
+          cp "$aab" "dist/bubumeal-$version.aab"
+          (cd dist && sha256sum * > SHA256SUMS.txt)
+          ls -l dist
+
+      - name: 키스토어 삭제
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"
+
+      # 같은 태그의 Release가 이미 있으면 파일만 덮어쓴다(재실행 대비).
+      - name: GitHub Release 올리기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            gh release upload "$tag" dist/* --clobber
+          else
+            gh release create "$tag" dist/* --title "$tag" --generate-notes
+          fi

@@ -47,9 +47,9 @@ RELEASE_KEY_PASSWORD=...
 .\gradlew.bat :androidApp:assembleRelease
 ```
 
-## GitHub Secrets (CD 단계에서 사용)
+## GitHub Secrets (CD에서 사용)
 
-저장소 Settings → Secrets and variables → Actions → New repository secret.
+저장소 Settings → Secrets and variables → Actions → New repository secret. CD(`.github/workflows/cd.yml`)는 아래 8개가 **모두** 있어야 돈다. 하나라도 비면 빌드 전에 실패한다(서명 없는 빌드나 가짜 로그인 빌드가 배포되지 않게).
 
 | Secret 이름 | 값 |
 |---|---|
@@ -57,6 +57,12 @@ RELEASE_KEY_PASSWORD=...
 | `RELEASE_STORE_PASSWORD` | 키스토어 비밀번호 |
 | `RELEASE_KEY_ALIAS` | alias |
 | `RELEASE_KEY_PASSWORD` | 키 비밀번호 |
+| `GOOGLE_WEB_CLIENT_ID` | `local.properties`의 같은 이름 값 |
+| `KAKAO_NATIVE_APP_KEY` | `local.properties`의 같은 이름 값 |
+| `NAVER_CLIENT_ID` | `local.properties`의 같은 이름 값 |
+| `NAVER_CLIENT_SECRET` | `local.properties`의 같은 이름 값 |
+
+로그인 키 4개도 서명 값처럼 **환경변수 → `local.properties`** 순서로 읽는다.
 
 base64 만들기(PowerShell, 결과를 클립보드에 복사):
 
@@ -64,21 +70,26 @@ base64 만들기(PowerShell, 결과를 클립보드에 복사):
 [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\경로\bubumeal-release.jks")) | Set-Clipboard
 ```
 
-워크플로에서는 시크릿을 파일로 풀고 환경변수로 넘긴다(CD 워크플로 작업 때 추가).
+CD 워크플로는 키스토어 시크릿을 `$RUNNER_TEMP/release.jks`로 풀고, 나머지는 환경변수로 Gradle에 넘긴다. 빌드가 끝나면 키스토어 파일을 지운다.
 
-```yaml
-- name: 키스토어 복원
-  run: echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
-- name: release 빌드
-  run: ./gradlew :androidApp:assembleRelease
-  env:
-    RELEASE_STORE_FILE: ${{ runner.temp }}/release.jks
-    RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
-    RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-    RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+PR(포크 포함)에서는 시크릿이 전달되지 않으므로 기존 CI는 계속 서명 없이, 가짜 로그인으로 빌드된다.
+
+## 배포하기 (CD)
+
+`v1.2.3` 형식의 태그를 push하면 CD가 서명된 AAB/APK를 빌드해 GitHub Release에 올린다.
+
+```powershell
+git switch main
+git pull
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
-PR(포크 포함)에서는 시크릿이 전달되지 않으므로 기존 CI는 계속 서명 없이 빌드된다.
+- 버전은 태그에서 정한다: `versionName = 1.2.3`, `versionCode = major*10000 + minor*100 + patch`(예: `v1.2.3` → 10203). minor와 patch는 99까지.
+- 기기와 Play는 versionCode가 커져야 업데이트로 받아 주므로, 태그 버전은 항상 올린다.
+- Release에는 `bubumeal-<버전>.apk`(기기에 바로 설치), `bubumeal-<버전>.aab`(Play 업로드용), `SHA256SUMS.txt`가 붙는다.
+- 같은 태그로 다시 돌리면(Actions에서 Re-run) 기존 Release의 파일을 덮어쓴다.
+- 로컬에서 버전을 지정해 빌드하려면 `.\gradlew.bat :androidApp:bundleRelease -PappVersionName=1.2.3`. 지정하지 않으면 1 / `1.0`.
 
 ## 제공자 콘솔에 release 지문 등록
 

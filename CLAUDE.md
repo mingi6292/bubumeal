@@ -33,7 +33,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 CI(`.github/workflows/ci.yml`)는 PR과 main push마다 위 테스트와 디버그 APK 빌드를 ubuntu에서 실행합니다. CI에는 `local.properties`가 없어 로그인은 가짜로 빌드됩니다.
 
-release 서명은 `RELEASE_STORE_FILE`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`를 환경변수 또는 `local.properties`에서 읽고, 하나라도 없으면 서명 없이 빌드합니다(키 없는 CI용). 키스토어(`*.jks`, `*.keystore`)는 git에 올리지 않습니다. 자세한 절차는 `docs/release-signing.md`를 봅니다.
+CD(`.github/workflows/cd.yml`)는 `v1.2.3` 태그 push 때 서명된 release AAB/APK를 빌드해 GitHub Release에 올립니다. 버전은 `-PappVersionName=1.2.3`으로 넘기고 versionCode는 `major*10000+minor*100+patch`입니다(지정하지 않으면 1 / `1.0`). 서명 키와 로그인 키 GitHub Secrets 8개가 하나라도 없으면 CD는 실패합니다. Play 업로드는 아직 없습니다.
+
+release 서명은 `RELEASE_STORE_FILE`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`를 환경변수 또는 `local.properties`에서 읽고(로그인 키 4개도 같은 순서), 하나라도 없으면 서명 없이 빌드합니다(키 없는 CI용). 키스토어(`*.jks`, `*.keystore`)는 git에 올리지 않습니다. 자세한 절차는 `docs/release-signing.md`를 봅니다.
 
 린터/포매터는 아직 설정되어 있지 않습니다(`kotlin.code.style=official`만 있음). Gradle 구성 캐시와 빌드 캐시가 켜져 있습니다.
 

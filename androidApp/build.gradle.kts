@@ -28,21 +28,34 @@ fun localProperty(name: String): String =
         .orElse("")
         .get()
 
-// release 서명 값은 환경변수(CI)를 먼저 보고, 없으면 local.properties(내 PC)에서 읽는다.
-fun signingValue(name: String): String =
+// 서명 값과 로그인 키는 환경변수(CI)를 먼저 보고, 없으면 local.properties(내 PC)에서 읽는다.
+fun buildValue(name: String): String =
     providers.environmentVariable(name).orElse("").get().ifBlank { localProperty(name) }
 
-val releaseStoreFile = signingValue("RELEASE_STORE_FILE")
-val releaseStorePassword = signingValue("RELEASE_STORE_PASSWORD")
-val releaseKeyAlias = signingValue("RELEASE_KEY_ALIAS")
-val releaseKeyPassword = signingValue("RELEASE_KEY_PASSWORD")
+val releaseStoreFile = buildValue("RELEASE_STORE_FILE")
+val releaseStorePassword = buildValue("RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = buildValue("RELEASE_KEY_ALIAS")
+val releaseKeyPassword = buildValue("RELEASE_KEY_PASSWORD")
 // 네 값이 모두 있어야 서명한다. 하나라도 비면 서명 없이 빌드해서 키 없는 CI가 깨지지 않게 한다.
 val hasReleaseSigning = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { it.isNotBlank() }
 
-val googleWebClientId = localProperty("GOOGLE_WEB_CLIENT_ID")
-val kakaoNativeAppKey = localProperty("KAKAO_NATIVE_APP_KEY")
-val naverClientId = localProperty("NAVER_CLIENT_ID")
-val naverClientSecret = localProperty("NAVER_CLIENT_SECRET")
+val googleWebClientId = buildValue("GOOGLE_WEB_CLIENT_ID")
+val kakaoNativeAppKey = buildValue("KAKAO_NATIVE_APP_KEY")
+val naverClientId = buildValue("NAVER_CLIENT_ID")
+val naverClientSecret = buildValue("NAVER_CLIENT_SECRET")
+
+// 버전은 CD가 태그(v1.2.3)에서 -PappVersionName=1.2.3으로 넘긴다. 없으면(로컬 빌드) 1 / "1.0".
+// versionCode = major*10000 + minor*100 + patch. Play와 기기는 versionCode가 커져야 업데이트로 받아 준다.
+val appVersionName = providers.gradleProperty("appVersionName").orElse("").get()
+val appVersionCode = if (appVersionName.isBlank()) 1 else {
+    val match = Regex("""(\d+)\.(\d+)\.(\d+)""").matchEntire(appVersionName)
+        ?: error("appVersionName은 1.2.3 형식이어야 합니다: $appVersionName")
+    val (major, minor, patch) = match.destructured.toList().map { it.toInt() }
+    require(major >= 1 && minor < 100 && patch < 100) {
+        "버전 범위를 벗어났습니다(major는 1 이상, minor/patch는 100 미만): $appVersionName"
+    }
+    major * 10000 + minor * 100 + patch
+}
 
 android {
     namespace = "com.mg.bubumeal"
@@ -52,8 +65,8 @@ android {
         applicationId = "com.mg.bubumeal"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName.ifBlank { "1.0" }
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
         buildConfigField("String", "KAKAO_NATIVE_APP_KEY", "\"$kakaoNativeAppKey\"")
         buildConfigField("String", "NAVER_CLIENT_ID", "\"$naverClientId\"")
