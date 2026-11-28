@@ -1,6 +1,9 @@
 package com.mg.bubumeal.ui.theme
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -14,6 +17,8 @@ fun BubuMealTheme(content: @Composable () -> Unit) {
         colorScheme = BubuMealColorScheme,
         shapes = BubuMealShapes,
         typography = typography,
-        content = content,
-    )
+    ) {
+        // Scaffold를 쓰지 않는 화면(로그인, 시작)도 크림 배경과 글자색을 받도록 앱 전체 바닥에 깐다.
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background, content = content)
+    }
 }
