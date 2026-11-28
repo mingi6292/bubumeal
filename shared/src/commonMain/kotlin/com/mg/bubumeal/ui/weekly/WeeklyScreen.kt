@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mg.bubumeal.domain.MealCell
@@ -75,13 +76,16 @@ fun WeeklyScreen(
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
+                                // 상단 바는 높이가 고정이라, 글자를 크게 해도 두 줄로 꺾여 잘리지 않게 한 줄로 줄인다.
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                     }
                 },
                 actions = {
                     TextButton(onClick = onOpenSettings) {
-                        Text("설정", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("설정", color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                 },
             )
