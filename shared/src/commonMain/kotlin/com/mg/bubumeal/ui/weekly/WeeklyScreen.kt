@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -249,9 +249,10 @@ private fun MealRow(slot: MealSlot, menu: String?, onClick: () -> Unit) {
     ) {
         Text(
             slot.label(),
-            modifier = Modifier.width(32.dp).padding(top = 2.dp),
+            modifier = Modifier.widthIn(min = 32.dp).padding(top = 2.dp),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
         )
         if (menu == null) {
             Text("+ 메뉴 적기", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
